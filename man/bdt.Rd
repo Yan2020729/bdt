@@ -65,7 +65,7 @@
   A <- rbinom(n,1,plogis(0.2+ W[,"W1"]+0.3*W[,"I1"]+W[,"W1"]*W[,"I1"]-0.2*(W[,"W2"]+W[,"I2"])^2 ))
   Y <-  1 + A + W[,"W1"] + 2*W[,"W2"] + 0.5*(W[,"W1"]+W[,"P1"])^2 + rnorm(n)
 
-  result1 <- bdt(Y, A, W, outcome_type="continuous", gGLM = TRUE, gform = "A~W2+W1+I1", M=100)
+  result1 <- bdt(Y, A, W, outcome_type="continuous", gGLM = TRUE, gform = "A~W2+W1+I1+I2", M=100)
   summary(result1)
 
 # User-supplied SuperLearner function to estimate g
