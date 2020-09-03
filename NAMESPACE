@@ -1,0 +1,27 @@
+
+## name spaces needed for S3 methods
+import(tmle)
+import(SuperLearner)
+import(sandwich)
+import(gam)
+import(glmnet)
+import(stringr)
+import(gdata)
+import(ggplot2)
+import(ggpubr)
+importFrom("graphics", "par")
+importFrom("stats", "as.formula", "binomial", "formula", "glm", "lm",
+                "predict", "predict.glm", "rbinom")
+
+S3method(print, summary.bdt)
+S3method(summary, bdt)
+S3method(plot, bdt)
+S3method(bias, bdt)
+
+
+##
+exportPattern("^[^\\\\.]")
+
+
+
+#exportPattern("^[[:alpha:]]+")
