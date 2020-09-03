@@ -12,7 +12,6 @@ import(ggpubr)
 importFrom("graphics", "par")
 importFrom("stats", "as.formula", "binomial", "formula", "glm", "lm",
                 "predict", "predict.glm", "rbinom")
-
 S3method(print, summary.bdt)
 S3method(summary, bdt)
 S3method(plot, bdt)
