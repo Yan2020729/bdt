@@ -37,19 +37,19 @@
 \examples{
 # Example
   set.seed(1250)
-  n=1000
-  sigma <- matrix(c(2, 1, 1, 1), ncol=2)
+  n <- 1000
+  sigma <- matrix(c(2, 1, 1, 1), ncol = 2)
   X <- matrix(rnorm(n*2), ncol = nrow(sigma)) %*% chol(sigma)
-  X <- X + matrix(rep(c(.5, 1),each=n), byrow=FALSE, ncol=2)
-  I1 <- rnorm(n,mean=1, sd=2)
-  I2 <- rnorm(n,mean=1, sd=1.9)
-  P1 <- rnorm(n,mean=1, sd=1.5)
-  W <- data.frame(X,I1,I2,P1)
+  X <- X + matrix(rep(c(.5, 1),each = n), byrow = FALSE, ncol = 2)
+  I1 <- rnorm(n,mean = 1, sd = 2)
+  I2 <- rnorm(n,mean = 1, sd = 1.9)
+  P1 <- rnorm(n,mean = 1, sd = 1.5)
+  W <- data.frame(X, I1, I2, P1)
   colnames(W) <- c("W1", "W2", "I1", "I2",  "P1")
-  A <- rbinom(n,1,plogis(0.2+W[,"W1"]+0.3*W[,"I1"]+W[,"W1"]*W[,"I1"]-0.2*(W[,"W2"]+W[,"I2"])^2 ))
-  Y <-  1 + A + W[,"W1"] + 2*W[,"W2"] + 0.5*(W[,"W1"]+W[,"P1"])^2 + rnorm(n)
+  A <- rbinom(n, 1, plogis(0.2 + W[,"W1"] + 0.3*W[,"I1"] + W[,"W1"]*W[,"I1"] - 0.2*(W[,"W2"] + W[,"I2"])^2 ))
+  Y <-  1 + A + W[,"W1"] + 2*W[,"W2"] + 0.5*(W[,"W1"] + W[,"P1"])^2 + rnorm(n)
 
-  result <- bdt(Y, A, W, outcome_type="continuous", gGLM = TRUE, gform = "A~W2+W1+I1", M=100)
+  result <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE, gform = "A~W2+W1+I1", M = 100)
   summary(result)
 }
 
