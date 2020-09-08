@@ -72,9 +72,8 @@
   ps.pred <- plogis( designM[, !is.na(ps$coeff)] %*% ps$coeff[!is.na(ps$coeff)] )
   ps.pred <- .bound(ps.pred, c(gbound, 1-gbound))
   ps_glm <- data.frame(A, ps.pred)
-  return(ps_glm)
+  return(list(ps_glm = ps_glm, fit_glm = summary(ps)))
 }
-
 
 
 #--------------------------- helper function to produce ps via SL -----------------------------
@@ -87,10 +86,10 @@
 .ps_SL <- function(A, W, SL.library, gbound){
   # use SL to compute p(A=1|W)
   library(SuperLearner)
-  ps.pred <- SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library)$SL.predict
-  ps.pred <- .bound(ps.pred, c(gbound, 1-gbound))
+  ps <- SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library)
+  ps.pred <- .bound(ps$SL.predict, c(gbound, 1-gbound))
   ps_sl <- data.frame(A, ps.pred)
-  return(ps_sl)
+  return(list(ps_sl = ps_sl, fit_SL = ps))
 }
 
 
@@ -138,8 +137,10 @@
 # input: Y, A, W, gGLM, gorm(default is NULL), SL.library(no default value)
 # return: summary of p(A=1|W) for all subjects with GLM and SL
 
-summary_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0){
+summary_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE){
   .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound)
+  # check verbose
+  if (!is.logical(verbose)) {stop("Verbose should be TRUE or FALSE. ")}
 
   # always have gform1 specified if gform2 is specified
   if (is.null(gform1) & !is.null(gform2)) {gform1 = gform2; gform2 = NULL}
@@ -156,20 +157,22 @@ summary_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, S
 
   # compute ps on case_vec
   ps_glm_list <- sapply(1:2, function(x)if (case_vec[x]==1) {
-    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)
+    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$ps_glm
     data_glm <- data.frame(rbind(summary(ps.GLM$ps.pred), summary(1-ps.GLM$ps.pred),
                                  summary(ps.GLM[A ==1,]$ps.pred), summary(1-ps.GLM[A ==0,]$ps.pred)))
     dimnames(data_glm) <- list(c(paste0(rowName,"GLM",x)),colName)
     list(data_glm)})
-  if (is.null(ps_glm_list[[2]]))rownames(ps_glm_list[[1]][[1]]) <- gsub('.{1}$', '', rownames(ps_glm_list[[1]][[1]]))
+  if (is.null(ps_glm_list[[2]]) & !is.null(ps_glm_list[[1]])){
+    rownames(ps_glm_list[[1]][[1]]) <- gsub('.{1}$', '', rownames(ps_glm_list[[1]][[1]]))}
 
   ps_SL_list <- sapply(1:2, function(x)if (case_vec[x+2] ==1) {
-    ps.SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)
+    ps.SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$ps_sl
     data_SL <- data.frame(rbind(summary(ps.SL$ps.pred), summary(1-ps.SL$ps.pred),
                                 summary(ps.SL[A ==1,]$ps.pred), summary(1-ps.SL[A ==0,]$ps.pred)))
     dimnames(data_SL) <- list(c(paste0(rowName,"SL",x)),colName)
     list(data_SL)})
-  if (is.null(ps_SL_list[[2]]))rownames(ps_SL_list[[1]][[1]]) <- gsub('.{1}$', '', rownames(ps_SL_list[[1]][[1]]))
+  if (is.null(ps_SL_list[[2]]) & !is.null(ps_SL_list[[1]])){
+    rownames(ps_SL_list[[1]][[1]]) <- gsub('.{1}$', '', rownames(ps_SL_list[[1]][[1]]))}
 
   # create all possible case vectors
   case_all_vec <- list(c(1,0,0,0), c(1,1,0,0), c(1,0,1,0), c(1,1,1,0), c(1,0,1,1), c(1,1,1,1), c(0,0,1,0), c(0,0,1,1))
@@ -184,8 +187,31 @@ summary_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, S
                  "rbind(ps_SL_list[[1]], ps_SL_list[[2]])")
 
   index <- as.numeric(unlist(sapply(1:8, function(x) if (all(case_all_vec[[x]] == case_vec)) return(x))))
-  eval(parse(text = data_name[index]))
+  ps_all <- eval(parse(text = data_name[index]))
+
+
+  if (verbose == TRUE) {
+    try(fit_glm_list <- sapply(1:2, function(x) if (case_vec[x]==1) {
+      fit_GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$fit_glm
+      list(fit_GLM)}))
+    try(fit_SL_list <- sapply(1:2, function(x) if (case_vec[x+2] ==1) {
+      fit_SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$fit_SL
+      list(fit_SL)}))
+
+    summ_name <- c("fit_glm_list[[1]][[1]]",
+                   "list(fit_glm_list[[1]], fit_SL_list[[2]])",
+                   "list(fit_glm_list[[1]][[1]], fit_SL_list[[1]][[1]])",
+                   "list(fit_glm_list[[1]], fit_glm_list[[2]], fit_SL_list[[1]][[1]])",
+                   "list(fit_glm_list[[1]][[1]], fit_SL_list[[1]], fit_SL_list[[2]])",
+                   "list(fit_glm_list[[1]], fit_glm_list[[2]], fit_SL_list[[1]], fit_SL_list[[2]])",
+                   "fit_SL_list[[1]][[1]]",
+                   "list(fit_SL_list[[1]], fit_SL_list[[2]])")
+    fit_all <- eval(parse(text = summ_name[index]))
+    return(list(probabilities = ps_all, summaries = fit_all))
+  }
+  else {return(ps_all)}
 }
+
 
 
 ############################### main function: density plots of log of weights ###############################
@@ -209,7 +235,7 @@ plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.l
 
   # compute ps on case_vec
   ps_glm_list <- sapply(1:2, function(x)if (case_vec[x]==1) {
-    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)
+    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$ps_glm
     n.GLM <- length(ps.GLM$ps.pred)
     ps1.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c(log(1/ps.GLM$ps.pred)))
     ps0.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c(log(1/(1-ps.GLM$ps.pred))))
@@ -220,7 +246,7 @@ plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.l
   if (is.null(ps_glm_list[[2]])) {for (i in 1:4)  {ps_glm_list[[1]][[1]][[i]]$Method = gsub('.{1}$', '', ps_glm_list[[1]][[1]][[i]]$Method) }}
 
   ps_SL_list <- sapply(1:2, function(x)if (case_vec[x+2] ==1) {
-    ps.SL <- .ps_SL(A=A, W=W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)
+    ps.SL <- .ps_SL(A=A, W=W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$ps_sl
     n.SL <- length(ps.SL$ps.pred)
     ps1.SL <- data.frame(as.factor(c(rep(paste0("SL",x), n.SL))),c(log(1/ps.SL$ps.pred)))
     ps0.SL <- data.frame(as.factor(c(rep(paste0("SL",x), n.SL))),c(log(1/(1-ps.SL$ps.pred))))
@@ -703,12 +729,12 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, gform = NULL, S
     bootdata <- .sim_data( A, W, Yform = Yform, outcome_type = outcome_type, fit_y1, fit_y0)
 
     if (!is.null(gform) & gGLM){
-      ps.GLM <- data.frame(.ps_GLM(A = bootdata$A, W = bootdata[, !names(bootdata) %in% c("Y", "A")], gform = gform, gbound = gbound))
+      ps.GLM <- data.frame(.ps_GLM(A = bootdata$A, W = bootdata[, !names(bootdata) %in% c("Y", "A")], gform = gform, gbound = gbound)$ps_glm)
       names(ps.GLM) <- c("A", "ps")
       ps.all.GLM <- rbind(ps.all.GLM, ps.GLM)
     }
     if (!is.null(SL.library) & !gGLM){
-      ps.SL <- data.frame(.ps_SL(A= bootdata$A, W = bootdata[, !names(bootdata) %in% c("Y", "A")], SL.library = SL.library, gbound = gbound))
+      ps.SL <- data.frame(.ps_SL(A= bootdata$A, W = bootdata[, !names(bootdata) %in% c("Y", "A")], SL.library = SL.library, gbound = gbound)$ps_sl)
       names(ps.SL) <- c("A", "ps")
       ps.all.SL <- rbind(ps.all.SL, ps.SL)
     }
@@ -746,12 +772,13 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, gform = NULL, S
     else (stop("Please specify SuperLearner library for g. \n\n"))
   }
 
-  results <- list(true_Effect = true_eff, bias_IPTW = bias_IPTW, bias_AIPTW = bias_AIPTW, bias_TMLE = bias_TMLE,
+  results <- list(true_Effect = true_eff, gbound =  gbound, bias_IPTW = bias_IPTW, bias_AIPTW = bias_AIPTW, bias_TMLE = bias_TMLE,
                   cov_IPTW = cov_IPTW/M, cov_AIPTW = cov_AIPTW/M, cov_TMLE = cov_TMLE/M,
                   ps_GLM = ps.all.GLM, ps_SL = ps.all.SL)
   class(results) <- "bdt"
   return(results)
 }
+
 
 
 
@@ -769,7 +796,6 @@ bias.bdt <- function(object,...){
   return(bias.ate)
 }
 bias <- function(x){ UseMethod("bias",x)}
-
 
 
 
@@ -795,7 +821,7 @@ summary.bdt <- function(object,...){
       ps11.sum = summary(smda[smda$A==1,]$ps)
       ps00.sum = summary(1-smda[smda$A==0,]$ps)}
 
-    summary.bdt <- list(true.effect = object$true_Effect,
+    summary.bdt <- list(true.effect = object$true_Effect, gbound = object$gbound,
                         bias.iptw = summary(object$bias_IPTW), bias.aiptw = summary(object$bias_AIPTW), bias.tmle = summary(object$bias_TMLE),
                         cov.iptw = object$cov_IPTW, cov.aiptw = object$cov_AIPTW, cov.tmle = object$cov_TMLE,
                         ps1 = ps1.sum, ps0 = ps0.sum, ps11 = ps11.sum, ps00 = ps00.sum)
@@ -827,7 +853,7 @@ print.summary.bdt <- function(x,...){
     cat("Coverage rate of AIPTW: ", x$cov.aiptw, " \n")
     cat("Coverage rate of TMLE: ", x$cov.tmle, " \n")
 
-    cat("\n\nSummary of propensity scores:")
+    cat("\n\nSummary of propensity scores truncated at gbound", x$gbound, " \n")
     p1 <- specify_decimal(x$ps1,6); p0 <- specify_decimal(x$ps0,6)
     p11 <- specify_decimal(x$ps11,6); p00 <- specify_decimal(x$ps00,6)
     cat("\n                                  Min.       1st Qu.     Median      Mean      3rd Qu.   Max.")
