@@ -85,7 +85,7 @@
 
 .ps_SL <- function(A, W, SL.library, gbound){
   # use SL to compute p(A=1|W)
-  library(SuperLearner)
+  # library(SuperLearner)
   ps <- SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library)
   ps.pred <- .bound(ps$SL.predict, c(gbound, 1-gbound))
   ps_sl <- data.frame(A, ps.pred)
@@ -132,96 +132,13 @@
 
 
 
-#--------------------------- main Summary function of ps for all subjects -----------------------------
+#--------------------------- main function of ps for all subjects -----------------------------
 
-# input: Y, A, W, gGLM, gorm(default is NULL), SL.library(no default value)
-# return: summary of p(A=1|W) for all subjects with GLM and SL
+# input: Y, A, W, gGLM, gorm(default is NULL), SL.library(no default value), verbose (default is FALSE)
+# return: summary of p(A=1|W) for all subjects with GLM and SL and summary of fit coefficients
+# if verbose is TRUE, it will show the fit summaries.
 
-summary_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE){
-  .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound)
-  # check verbose
-  if (!is.logical(verbose)) {stop("Verbose should be TRUE or FALSE. ")}
-
-  # always have gform1 specified if gform2 is specified
-  if (is.null(gform1) & !is.null(gform2)) {gform1 = gform2; gform2 = NULL}
-
-  # always have SL.library1 specified if SL.library2 is specified
-  if (is.null(SL.library1) & !is.null(SL.library2)) {SL.library1 = SL.library2; SL.library2 = NULL}
-
-  # create a case vector
-  case_vec <- sapply(1:4, function(x)as.numeric(!is.null(list(gform1, gform2, SL.library1, SL.library2)[[x]])))
-
-  # create summary names
-  rowName <- c("P(A=1|W) for all subjects by ", "P(A=0|W) for all subjects by ", "P(A=1|W) in subgroups A=1 by ", "P(A=0|W) in subgroups A=0 by ")
-  colName <- c("Min.", "1st Qu.","Median", "Mean", "3rd Qu.", "Max.")
-
-  # compute ps on case_vec
-  ps_glm_list <- sapply(1:2, function(x)if (case_vec[x]==1) {
-    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$ps_glm
-    data_glm <- data.frame(rbind(summary(ps.GLM$ps.pred), summary(1-ps.GLM$ps.pred),
-                                 summary(ps.GLM[A ==1,]$ps.pred), summary(1-ps.GLM[A ==0,]$ps.pred)))
-    dimnames(data_glm) <- list(c(paste0(rowName,"GLM",x)),colName)
-    list(data_glm)})
-  if (is.null(ps_glm_list[[2]]) & !is.null(ps_glm_list[[1]])){
-    rownames(ps_glm_list[[1]][[1]]) <- gsub('.{1}$', '', rownames(ps_glm_list[[1]][[1]]))}
-
-  ps_SL_list <- sapply(1:2, function(x)if (case_vec[x+2] ==1) {
-    ps.SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$ps_sl
-    data_SL <- data.frame(rbind(summary(ps.SL$ps.pred), summary(1-ps.SL$ps.pred),
-                                summary(ps.SL[A ==1,]$ps.pred), summary(1-ps.SL[A ==0,]$ps.pred)))
-    dimnames(data_SL) <- list(c(paste0(rowName,"SL",x)),colName)
-    list(data_SL)})
-  if (is.null(ps_SL_list[[2]]) & !is.null(ps_SL_list[[1]])){
-    rownames(ps_SL_list[[1]][[1]]) <- gsub('.{1}$', '', rownames(ps_SL_list[[1]][[1]]))}
-
-  # create all possible case vectors
-  case_all_vec <- list(c(1,0,0,0), c(1,1,0,0), c(1,0,1,0), c(1,1,1,0), c(1,0,1,1), c(1,1,1,1), c(0,0,1,0), c(0,0,1,1))
-
-  data_name <- c("ps_glm_list[[1]][[1]]",
-                 "rbind(ps_glm_list[[1]], ps_glm_list[[2]])",
-                 "rbind(ps_glm_list[[1]][[1]], ps_SL_list[[1]][[1]])",
-                 "rbind(ps_glm_list[[1]], ps_glm_list[[2]], ps_SL_list[[1]][[1]])",
-                 "rbind(ps_glm_list[[1]][[1]], ps_SL_list[[1]], ps_SL_list[[2]])",
-                 "rbind(ps_glm_list[[1]], ps_glm_list[[2]], ps_SL_list[[1]], ps_SL_list[[2]])",
-                 "ps_SL_list[[1]][[1]]",
-                 "rbind(ps_SL_list[[1]], ps_SL_list[[2]])")
-
-  index <- as.numeric(unlist(sapply(1:8, function(x) if (all(case_all_vec[[x]] == case_vec)) return(x))))
-  ps_all <- eval(parse(text = data_name[index]))
-
-
-  if (verbose == TRUE) {
-    try(fit_glm_list <- sapply(1:2, function(x) if (case_vec[x]==1) {
-      fit_GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$fit_glm
-      list(fit_GLM)}))
-    try(fit_SL_list <- sapply(1:2, function(x) if (case_vec[x+2] ==1) {
-      fit_SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$fit_SL
-      list(fit_SL)}))
-
-    summ_name <- c("fit_glm_list[[1]][[1]]",
-                   "list(fit_glm_list[[1]], fit_SL_list[[2]])",
-                   "list(fit_glm_list[[1]][[1]], fit_SL_list[[1]][[1]])",
-                   "list(fit_glm_list[[1]], fit_glm_list[[2]], fit_SL_list[[1]][[1]])",
-                   "list(fit_glm_list[[1]][[1]], fit_SL_list[[1]], fit_SL_list[[2]])",
-                   "list(fit_glm_list[[1]], fit_glm_list[[2]], fit_SL_list[[1]], fit_SL_list[[2]])",
-                   "fit_SL_list[[1]][[1]]",
-                   "list(fit_SL_list[[1]], fit_SL_list[[2]])")
-    fit_all <- eval(parse(text = summ_name[index]))
-    return(list(probabilities = ps_all, summaries = fit_all))
-  }
-  else {return(ps_all)}
-}
-
-
-
-############################### main function: density plots of log of weights ###############################
-# input: A, W, gorm(default is NULL), SL.library(default is NULL)
-# return: 2 x 2 density plots (A, B, C, D) of the log of the estimated weights for
-#         A--treatment A=1 in subset of subjects with A=1
-#         B--treatment A=0 in subset of subjects with A=0
-#         C--treatment A=1 for all subjects
-#         D--treatment A=0 for all subjects
-plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0,...){
+ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE){
   .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound)
 
   # always have gform1 specified if gform2 is specified
@@ -237,24 +154,26 @@ plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.l
   ps_glm_list <- sapply(1:2, function(x)if (case_vec[x]==1) {
     ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$ps_glm
     n.GLM <- length(ps.GLM$ps.pred)
-    ps1.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c(log(1/ps.GLM$ps.pred)))
-    ps0.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c(log(1/(1-ps.GLM$ps.pred))))
-    ps.A1.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), length(ps.GLM[A ==1,]$ps.pred)))),c(log(1/ps.GLM[A ==1,]$ps.pred)))
-    ps.A0.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), length(ps.GLM[A ==0,]$ps.pred)))),c(log(1/(1-ps.GLM[A ==0,]$ps.pred))))
+    ps1.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c(ps.GLM$ps.pred))
+    ps0.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c((1-ps.GLM$ps.pred)))
+    ps.A1.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), length(ps.GLM[A ==1,]$ps.pred)))),c(ps.GLM[A ==1,]$ps.pred))
+    ps.A0.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), length(ps.GLM[A ==0,]$ps.pred)))),c((1-ps.GLM[A ==0,]$ps.pred)))
     colnames(ps1.GLM) <- colnames(ps0.GLM) <- colnames(ps.A1.GLM) <- colnames(ps.A0.GLM) <- c("Method", "Propensity")
     list(list(ps1.GLM, ps0.GLM, ps.A1.GLM, ps.A0.GLM))})
-  if (is.null(ps_glm_list[[2]])) {for (i in 1:4)  {ps_glm_list[[1]][[1]][[i]]$Method = gsub('.{1}$', '', ps_glm_list[[1]][[1]][[i]]$Method) }}
+  if (is.null(ps_glm_list[[2]]) & !is.null(ps_glm_list[[1]])) {
+    for (i in 1:4)  {ps_glm_list[[1]][[1]][[i]]$Method = gsub('.{1}$', '', ps_glm_list[[1]][[1]][[i]]$Method) }}
 
   ps_SL_list <- sapply(1:2, function(x)if (case_vec[x+2] ==1) {
     ps.SL <- .ps_SL(A=A, W=W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$ps_sl
     n.SL <- length(ps.SL$ps.pred)
-    ps1.SL <- data.frame(as.factor(c(rep(paste0("SL",x), n.SL))),c(log(1/ps.SL$ps.pred)))
-    ps0.SL <- data.frame(as.factor(c(rep(paste0("SL",x), n.SL))),c(log(1/(1-ps.SL$ps.pred))))
-    ps.A1.SL <- data.frame(as.factor(c(rep(paste0("SL",x), length(ps.SL[A ==1,]$ps.pred)))),c(log(1/ps.SL[A ==1,]$ps.pred)))
-    ps.A0.SL <- data.frame(as.factor(c(rep(paste0("SL",x), length(ps.SL[A ==0,]$ps.pred)))),c(log(1/(1-ps.SL[A ==0,]$ps.pred))))
+    ps1.SL <- data.frame(as.factor(c(rep(paste0("SL",x), n.SL))),c(ps.SL$ps.pred))
+    ps0.SL <- data.frame(as.factor(c(rep(paste0("SL",x), n.SL))),c((1-ps.SL$ps.pred)))
+    ps.A1.SL <- data.frame(as.factor(c(rep(paste0("SL",x), length(ps.SL[A ==1,]$ps.pred)))),c(ps.SL[A ==1,]$ps.pred))
+    ps.A0.SL <- data.frame(as.factor(c(rep(paste0("SL",x), length(ps.SL[A ==0,]$ps.pred)))),c((1-ps.SL[A ==0,]$ps.pred)))
     colnames(ps1.SL) <- colnames(ps0.SL) <- colnames(ps.A1.SL) <- colnames(ps.A0.SL) <- c("Method", "Propensity")
     list(list(ps1.SL, ps0.SL, ps.A1.SL, ps.A0.SL))})
-  if (is.null(ps_SL_list[[2]])) {for (i in 1:4)  {ps_SL_list[[1]][[1]][[i]]$Method = gsub('.{1}$', '', ps_SL_list[[1]][[1]][[i]]$Method) }}
+  if (is.null(ps_SL_list[[2]])  & !is.null(ps_SL_list[[1]])) {
+    for (i in 1:4)  {ps_SL_list[[1]][[1]][[i]]$Method = gsub('.{1}$', '', ps_SL_list[[1]][[1]][[i]]$Method) }}
 
   # adjust the case vect and produce index number among all case vector
   case_all_vec <- list(c(1,0,0,0), c(1,1,0,0), c(1,0,1,0), c(1,1,1,0), c(1,0,1,1), c(1,1,1,1), c(0,0,1,0), c(0,0,1,1))
@@ -299,21 +218,83 @@ plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.l
 
   # produce datas on index number
   ps_data <- sapply(1:4, function(x) list(eval(parse(text = data_name[[index]][[x]]))))
-  xlab_name <- c("log(1/g_1)", "log(1/g_0)", "log(1/g_1)[A=1]", "log(1/g_1)[A=0]")
+  class(ps_data) <- "ps"
 
-  # create 4 plots and combine to one plot
-  library(ggplot2)
-  cols <- c("red", "green", "blue", "orange")
-  ps_plot <- sapply(1:4, function(y) list(ggplot(ps_data[[y]], aes(fill = ps_data[[y]]$Method, x = ps_data[[y]]$Propensity))+ geom_density(alpha=0.3)+
-                                            theme(legend.title = element_blank(),legend.position="top",legend.key.size = unit(0.3, "cm"))+
-                                            scale_fill_manual(values = cols, labels = c(as.character(unique(ps_data[[y]]$Method))))+xlab(xlab_name[y])))
+  if (verbose == TRUE) {
+    try(fit_glm_list <- sapply(1:2, function(x) if (case_vec[x]==1) {
+      fit_GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$fit_glm
+      list(fit_GLM)}))
+    try(fit_SL_list <- sapply(1:2, function(x) if (case_vec[x+2] ==1) {
+      fit_SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$fit_SL
+      list(fit_SL)}))
 
-  ps_plots <- ggpubr::ggarrange(ps_plot[[3]], ps_plot[[4]], ps_plot[[1]], ps_plot[[2]], labels = c("A","B","C","D"), ncol=2, nrow=2)
-  par(ask = FALSE)
-  return(ps_plots)
+    summ_name <- c("fit_glm_list[[1]][[1]]",
+                   "list(fit_glm_list[[1]], fit_glm_list[[2]])",
+                   "list(fit_glm_list[[1]][[1]], fit_SL_list[[1]][[1]])",
+                   "list(fit_glm_list[[1]], fit_glm_list[[2]], fit_SL_list[[1]][[1]])",
+                   "list(fit_glm_list[[1]][[1]], fit_SL_list[[1]], fit_SL_list[[2]])",
+                   "list(fit_glm_list[[1]], fit_glm_list[[2]], fit_SL_list[[1]], fit_SL_list[[2]])",
+                   "fit_SL_list[[1]][[1]]",
+                   "list(fit_SL_list[[1]], fit_SL_list[[2]])")
+    fit_all <- eval(parse(text = summ_name[index]))
+    ps_all <- list(probabilities = ps_data, fit_summaries = fit_all)
+    class(ps_all) = "ps"
+    return(ps_all)
+  }
+  else {
+    class(ps_data) = "ps"
+    return(ps_data)}
 }
 
 
+
+summary.ps <- function(object,...){
+  if(identical(class(object), "ps")){
+    rowName <- c("P(A=1|W) for all subjects by ", "P(A=0|W) for all subjects by ", "P(A=1|W) in subgroups A=1 by ", "P(A=0|W) in subgroups A=0 by ")
+    colName <- c("Min.", "1st Qu.","Median", "Mean", "3rd Qu.", "Max.")
+    methods <- unique(object$probabilities[[1]]$Method)
+    summ_list <- NULL
+    for (i in 1:length(methods)){
+      summ <- t(data.frame(sapply(1:4, function(x)summary(object$probabilities[[x]][which(object$probabilities[[x]]$Method == methods[[i]]), ]$Propensity))))
+      dimnames(summ) <- list(c(paste0(rowName,as.character(methods[[i]]))),colName)
+      summ_list <- rbind(summ_list, summ)
+    }
+  } else {
+    stop("Object must have class 'ps'")
+    summ_list <- NULL}
+  return(summ_list)
+}
+
+
+
+############################### main function: density plots of log of weights ###############################
+# input: A, W, gorm(default is NULL), SL.library(default is NULL)
+# return: 2 x 2 density plots (A, B, C, D) of the log of the estimated weights for
+#         A--treatment A=1 in subset of subjects with A=1
+#         B--treatment A=0 in subset of subjects with A=0
+#         C--treatment A=1 for all subjects
+#         D--treatment A=0 for all subjects
+plot.ps <- function(object,...){
+  if(identical(class(object), "ps")){
+    # produce datas on index number
+    ps_data <- object$probabilities
+    xlab_name <- c("log(1/g_1)", "log(1/g_0)", "log(1/g_1)[A=1]", "log(1/g_1)[A=0]")
+
+    # create 4 plots and combine to one plot
+    # library(ggplot2)
+    cols <- c("red", "green", "blue", "orange")
+    ps_plot <- sapply(1:4, function(y) list(ggplot(ps_data[[y]], aes(fill = ps_data[[y]]$Method, x = log(1/ps_data[[y]]$Propensity)))+ geom_density(alpha=0.3)+
+                                              theme(legend.title = element_blank(),legend.position="top",legend.key.size = unit(0.3, "cm"))+
+                                              scale_fill_manual(values = cols, labels = c(as.character(unique(ps_data[[y]]$Method))))+xlab(xlab_name[y])))
+
+    ps_plots <- ggpubr::ggarrange(ps_plot[[3]], ps_plot[[4]], ps_plot[[1]], ps_plot[[2]], labels = c("A","B","C","D"), ncol=2, nrow=2)
+    par(ask = FALSE)
+  }else {
+    stop("Object must have class 'ps'")
+    ps_plots <- NULL}
+  return(ps_plots)
+}
+# plot(dd)
 
 
 ############################################################################################################
@@ -441,7 +422,7 @@ plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.l
 # output: the estimated ATE and confidence intervals
 
 .tmle_mod <- function(Y, A, W, Qform, gform = NULL, SL.library, gbound = gbound, outcome_type){
-  library(tmle)
+  # library(tmle)
   if (identical(outcome_type,"continuous")){
     tmlemod <- tmle(Y = Y, A = A, W = W, Qform = Qform, gform = gform, g.SL.library = SL.library, gbound = gbound, family = "gaussian")}
 
@@ -468,7 +449,7 @@ plot_ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.l
 
 TMLE_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
 
-  library(tmle)
+  # library(tmle)
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
@@ -484,7 +465,7 @@ TMLE_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform 
       eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, gform = gform) }
   }
   else { # if gGLM is FALSE, use SL
-    library(SuperLearner)
+    # library(SuperLearner)
     eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, SL.library = SL.library)
   }
   return(eff_tmle) # return list type values: ate and CI
@@ -567,7 +548,7 @@ AIPTW_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform
       w <- .weight.glm(ObsData, gform, gbound)}
   }
   else {
-    library(SuperLearner)
+    # library(SuperLearner)
     ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library))
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL$SL.predict, ps.SL$SL.predict)
     w <- .weight(ps.obs, gbound)
@@ -611,7 +592,7 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform = NULL,
       w <- .weight.glm(ObsData, gform, gbound) }
   }
   else {
-    library(SuperLearner)
+    # library(SuperLearner)
     ps.SL <- SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library)
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL$SL.predict, ps.SL$SL.predict)
     w <- .weight(ps.obs, gbound)
@@ -889,7 +870,7 @@ plot.bdt <- function(object,...){
     title <- paste("Boxplots of the ATE bias with different estimators")
     anno.data <- data.frame(type = c("IPTW", "AIPTW", "TMLE"), high = min(est_data$Bias_ATE)-0.03,
                             coverage = round(c(object$cov_IPTW, object$cov_AIPTW, object$cov_TMLE), 2))
-    library(ggplot2)
+    # library(ggplot2)
     est_plot <- ggplot(est_data, aes(x = as.factor(type_est), y = Bias_ATE))+
       geom_boxplot(outlier.size = 0.4, fill= "cornflowerblue", notch = FALSE)+
       geom_rug(color = "black") + ggtitle(title)+
