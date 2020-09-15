@@ -7,6 +7,7 @@
 \usage{
   \method{bias}{bdt}(object, \dots)
   \item{\dots}{currently ignored.}
+  %\method{bias}(x)
   bias(x)
 }
 
