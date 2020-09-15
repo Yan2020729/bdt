@@ -21,6 +21,5 @@
 
 \seealso{
 \code{\link{bdt}}
-
 \code{\link{summary.bdt}}
 }
