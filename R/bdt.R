@@ -218,7 +218,6 @@ ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.librar
 
   # produce datas on index number
   ps_data <- sapply(1:4, function(x) list(eval(parse(text = data_name[[index]][[x]]))))
-  class(ps_data) <- "ps"
 
   if (verbose == TRUE) {
     try(fit_glm_list <- sapply(1:2, function(x) if (case_vec[x]==1) {
@@ -242,8 +241,9 @@ ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.librar
     return(ps_all)
   }
   else {
-    class(ps_data) = "ps"
-    return(ps_data)}
+    ps_all <- list(probabilities = ps_data)
+    class(ps_all) = "ps"
+    return(ps_all)}
 }
 
 
@@ -278,7 +278,7 @@ plot.ps <- function(object,...){
   if(identical(class(object), "ps")){
     # produce datas on index number
     ps_data <- object$probabilities
-    xlab_name <- c("log(1/g_1)", "log(1/g_0)", "log(1/g_1)[A=1]", "log(1/g_1)[A=0]")
+    xlab_name <- c("log(1/g_1)", "log(1/g_0)", "log(1/g_1)[A=1]", "log(1/g_0)[A=0]")
 
     # create 4 plots and combine to one plot
     # library(ggplot2)
@@ -302,24 +302,25 @@ plot.ps <- function(object,...){
 ############################################################################################################
 
 #---------------------- function to fit glm on Y in the observed data -------------------------
-# input: Y, A, W, Yform, outcome type(continuous or binary)
+# input: Y, A, W, Qform, outcome type(continuous or binary)
 # output: the coefficients of the glm and valide variable names for two treatment groups
 
-.fit_glm_Y <- function(Y, A, W, Yform, outcome_type){
+.fit_glm_Y <- function(Y, A, W, Qform, outcome_type){
   ObsData <- data.frame(Y, A, W)
 
   # split the observed dataset to two treatment groups
   base1 <- ObsData[ObsData$A ==1,]
   base0 <- ObsData[ObsData$A ==0,]
+  Qform <- stringr::str_replace_all(string = Qform, pattern = "A+", repl = "1")
 
   # regress the outcome separately in two groups
   if (identical(outcome_type,"continuous")){
-    regY1 <- glm(Yform, data = base1, family = "gaussian")
-    regY0 <- glm(Yform, data = base0, family = "gaussian")
+    regY1 <- lm(Qform, data = base1)
+    regY0 <- lm(Qform, data = base0)
   }
   if (identical(outcome_type,"binary")){
-    regY0 <- glm(Yform, data = base0, family = "binomial")
-    regY1 <- glm(Yform, data = base1, family = "binomial")
+    regY0 <- glm(Qform, data = base0, family = "binomial")
+    regY1 <- glm(Qform, data = base1, family = "binomial")
   }
   return(list(fit_y0=regY0, fit_y1=regY1))
 }
@@ -335,7 +336,7 @@ plot.ps <- function(object,...){
 #        variable names for two treatment groups
 # output: one bootstrap dataset
 
-.sim_data <- function(A, W, Yform, outcome_type, fit_y1, fit_y0)
+.sim_data <- function(A, W, Qform, outcome_type, fit_y1, fit_y0)
 {
   ObsData <- data.frame(A, W)
   base1 <- ObsData[ObsData$A == 1,]
@@ -351,14 +352,16 @@ plot.ps <- function(object,...){
   BaseBData0 <- bootData[bootData$A == 0,]
 
   # create design matrix on simulated data
-  noSpace.Yform <- substring(stringr::str_replace_all(string = Yform, pattern = " ", repl= ""), 2)
-  designM1 <- model.matrix (as.formula(noSpace.Yform), BaseBData1)
-  designM0 <- model.matrix (as.formula(noSpace.Yform), BaseBData0)
+  Qform <- substring(stringr::str_replace_all(string = Qform, pattern = "A+", repl = "1"),2)
+  designM1 <- model.matrix (as.formula(Qform), BaseBData1)
+  designM0 <- model.matrix (as.formula(Qform), BaseBData0)
 
   # get the new outcome based on the coeffs of glm on original data
   if (identical(outcome_type,"continuous")){
-    Ypred1 <- designM1[, !is.na(coef(fit_y1))] %*% fit_y1$coeff[!is.na(coef(fit_y1))]
-    Ypred0 <- designM0[, !is.na(coef(fit_y0))] %*% fit_y0$coeff[!is.na(coef(fit_y0))]
+    mu1 = designM1[, !is.na(coef(fit_y1))] %*% fit_y1$coeff[!is.na(coef(fit_y1))]
+    mu0 = designM0[, !is.na(coef(fit_y0))] %*% fit_y0$coeff[!is.na(coef(fit_y0))]
+    Ypred1 <- rnorm(n=dim(BaseBData1)[1], mean= mu1, sd= summary(fit_y1)$sigma)
+    Ypred0 <- rnorm(n=dim(BaseBData0)[1], mean= mu0, sd= summary(fit_y0)$sigma)
   }
   if (identical(outcome_type,"binary")){
     Ypred1 <- rbinom(dim(BaseBData1)[1],1, plogis( designM1[, !is.na(coef(fit_y1))] %*% coef(fit_y1)[!is.na(coef(fit_y1))] ))
@@ -388,11 +391,11 @@ plot.ps <- function(object,...){
 #        and valid variable names for two treatment groups
 # output: one numerical true value
 
-.trueVal <- function (W, Yform, outcome_type, fit_y1, fit_y0){
+.trueVal <- function (W, Qform, outcome_type, fit_y1, fit_y0){
 
-  # create design matrix on Yform
-  noSpace.Yform <- substring(stringr::str_replace_all(string = Yform, pattern = " ", repl = ""), 2)
-  designM <- model.matrix (as.formula(noSpace.Yform), W)
+  # create design matrix on Qform
+  Qform <- stringr::str_replace_all(string = Qform, pattern = "A+", repl = "1")
+  designM <- model.matrix (as.formula(Qform), W)
 
   # compute two potential outcomes of original data
   if (identical(outcome_type,"continuous")){
@@ -400,8 +403,8 @@ plot.ps <- function(object,...){
     yy0 <- designM[, !is.na(coef(fit_y0))] %*% fit_y0$coeff[!is.na(coef(fit_y0))]
   }
   if (identical(outcome_type,"binary")){
-    yy1 <- rbinom(dim(W)[1],1, plogis( designM[, !is.na(coef(fit_y1))] %*% coef(fit_y1)[!is.na(coef(fit_y1))] ))
-    yy0 <- rbinom(dim(W)[1],1, plogis( designM[, !is.na(coef(fit_y0))] %*% coef(fit_y0)[!is.na(coef(fit_y0))] ))
+    yy1 <- plogis( designM[, !is.na(coef(fit_y1))] %*% coef(fit_y1)[!is.na(coef(fit_y1))] )
+    yy0 <- plogis( designM[, !is.na(coef(fit_y0))] %*% coef(fit_y0)[!is.na(coef(fit_y0))] )
   }
 
   # compute the difference of the mean of two potential outcomes
@@ -416,6 +419,13 @@ plot.ps <- function(object,...){
 #------------------------------------------------ Stage 4 --------------------------------------------------
 ############################################################################################################
 
+# use the bound function to compute the weight
+.weight <- function (x, gbound){
+  if (gbound ==0){weigh <- 1/x}
+  if (gbound!=0){weigh <- 1/.bound(x, c(gbound, 1-gbound))}
+  return(weigh)
+}
+
 #------------------------- helper function to estimate ate by TMLE ------------------------------------
 # gform: user defined form
 # SL.library: user defined library in SL
@@ -424,17 +434,17 @@ plot.ps <- function(object,...){
 .tmle_mod <- function(Y, A, W, Qform, gform = NULL, SL.library, gbound = gbound, outcome_type){
   # library(tmle)
   if (identical(outcome_type,"continuous")){
-    tmlemod <- tmle(Y = Y, A = A, W = W, Qform = Qform, gform = gform, g.SL.library = SL.library, gbound = gbound, family = "gaussian")}
+    tmlemod <- tmle(Y = Y, A = A, W = W, Qform = Qform, gform = gform, g.SL.library = SL.library, gbound = gbound,
+                    family = "gaussian", alpha = 0.995 )}
 
   if (identical(outcome_type,"binary")){
-    tmlemod <- tmle(Y = Y, A = A, W = W, Qform = Qform, gform = gform, g.SL.library = SL.library, gbound = gbound, family = "binomial")}
+    tmlemod <- tmle(Y = Y, A = A, W = W, Qform = Qform, gform = gform, g.SL.library = SL.library, gbound = gbound,
+                    family = "binomial", alpha = 0.995 )}
 
   ate <- tmlemod$estimates$ATE$psi
   ci <- tmlemod$estimates$ATE$CI
   return(list(ATE = ate, CI = ci))
 }
-
-
 
 
 #------------------------ main function of TMLE to estimate ATE with flexible g (SL or GLM) ----------------------
@@ -447,24 +457,18 @@ plot.ps <- function(object,...){
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate and 95% confidence interval
 
-TMLE_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
+TMLE_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
 
   # library(tmle)
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
-  noSpace.Yform <- substring(stringr::str_replace_all(string = Yform, pattern = " ", repl = ""), 3)
-  Qform <- paste("Y~A+", paste(noSpace.Yform, collapse = "+"))
 
   # according to the logical value of gGLM, use GLM or SL to estimate ate
+  if (is.null(gform)){gform <- paste("A~", paste(colnames(W), collapse="+"))}
   if (gGLM){ # if gGLM is true, use GLM
-    if(!is.null(gform)){ # use user supplied gform
-      eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, gform = gform) }
-    else { # use default gform
-      gform <- paste("A~", paste(colnames(W), collapse="+"))
-      eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, gform = gform) }
-  }
-  else { # if gGLM is FALSE, use SL
+    eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, gform = gform)
+  }else { # if gGLM is FALSE, use SL
     # library(SuperLearner)
     eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, SL.library = SL.library)
   }
@@ -477,13 +481,12 @@ TMLE_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform 
 #--------------------------- helper functions to estimate ate by AIPTW --------------------------------
 
 #----------- compute weight according to different gbound --------------
-
-# use the bound function to compute the weight
 .weight <- function (x, gbound){
   if (gbound ==0){weigh <- 1/x}
   if (gbound!=0){weigh <- 1/.bound(x, c(gbound, 1-gbound))}
   return(weigh)
 }
+
 
 #-------------- compute the weight via GLM ----------------
 # given dataset, gform and bounds, use GLM to compute weights
@@ -492,7 +495,6 @@ TMLE_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform 
   ps <- glm(gform, data = ObsData, family = "binomial")
   designM <- model.matrix (as.formula(gform), ObsData)
   ps.pred <- plogis( designM[, !is.na(coef(ps))] %*% coef(ps)[!is.na(coef(ps))] )
-
   ps.obs <- ifelse(ObsData$A == 0, 1- ps.pred, ps.pred)
   w <- .weight(ps.obs, gbound)# use the weight function
   return(w)
@@ -509,48 +511,39 @@ TMLE_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform 
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate and 95% confidence interval
 #
-AIPTW_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
+AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
 
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
   n <- length(Y)
 
-  # create design matrix on simulated data
-  noSpace.Yform <- substring(stringr::str_replace_all(string = Yform, pattern = " ", repl = ""), 2)
-  designM <- model.matrix (as.formula(noSpace.Yform), ObsData)
-
   # get the potential outcome based on the coeffs of glm on original data
+  designM1 <- model.matrix (as.formula(Qform), data.frame(A=1, W))
+  designM0 <- model.matrix (as.formula(Qform), data.frame(A=0, W))
+
   if (identical(outcome_type,"continuous")){
-
-    reg1 <- glm(Yform, data = ObsData[A ==1,], family = "gaussian")
-    reg0 <- glm(Yform, data = ObsData[A ==0,], family = "gaussian")
-
-    Y1_hat <- designM[, !is.na(coef(reg1))] %*% reg1$coeff[!is.na(coef(reg1))]
-    Y0_hat <- designM[, !is.na(coef(reg0))] %*% reg0$coeff[!is.na(coef(reg0))]
+    reg <- glm(Qform, data = ObsData, family = "gaussian")
+    Y1_hat <- designM1[, !is.na(coef(reg))] %*% reg$coeff[!is.na(coef(reg))]
+    Y0_hat <- designM0[, !is.na(coef(reg))] %*% reg$coeff[!is.na(coef(reg))]
   }
 
   if (identical(outcome_type,"binary")){
-
-    reg1 <- glm(Yform, data = ObsData[A ==1,], family = "binomial")
-    reg0 <- glm(Yform, data = ObsData[A ==0,], family = "binomial")
-
-    Y1_hat <- rbinom(n, 1, plogis(designM[, !is.na(coef(reg1))] %*% reg1$coeff[!is.na(coef(reg1))]))
-    Y0_hat <- rbinom(n, 1, plogis(designM[, !is.na(coef(reg0))] %*% reg0$coeff[!is.na(coef(reg0))]))
+    reg <- glm(Qform, data = ObsData, family = "binomial")
+    Y1_hat <- plogis(designM1[, !is.na(coef(reg))] %*% reg$coeff[!is.na(coef(reg))])
+    Y0_hat <- plogis(designM0[, !is.na(coef(reg))] %*% reg$coeff[!is.na(coef(reg))])
   }
 
   # estimate propensity score
-  if (gGLM){
-    if(!is.null(gform)){
-      w <- .weight.glm(ObsData, gform, gbound) }
-    else {
-      gform=paste("A~", paste(colnames(W), collapse = "+"))
-      w <- .weight.glm(ObsData, gform, gbound)}
-  }
-  else {
+  if(is.null(gform)){gform=paste("A~", paste(colnames(W), collapse = "+"))}
+  if (gGLM){w <- .weight.glm(ObsData, gform, gbound)
+  }else {
     # library(SuperLearner)
-    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library))
-    ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL$SL.predict, ps.SL$SL.predict)
+    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
+    val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
+    val <- unlist(strsplit( val, split = " "))
+    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W[,val], family = binomial(), SL.library = SL.library)$SL.predict)
+    ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL, ps.SL)
     w <- .weight(ps.obs, gbound)
   }
 
@@ -578,27 +571,26 @@ AIPTW_ate <- function (ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate and 95% confidence interval
 
-IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
+IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, SL.library){
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
 
   # estimate propensity score
-  if (gGLM){
-    if(!is.null(gform)){
-      w <- .weight.glm(ObsData, gform, gbound) }
-    else {
-      gform <- paste("A~", paste(colnames(W), collapse = "+"))
-      w <- .weight.glm(ObsData, gform, gbound) }
-  }
-  else {
+  if(is.null(gform)){gform=paste("A~", paste(colnames(W), collapse = "+"))}
+  if (gGLM){w <- .weight.glm(ObsData, gform, gbound)
+  }else {
     # library(SuperLearner)
-    ps.SL <- SuperLearner(Y = A, X = W, family = binomial(), SL.library = SL.library)
+    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
+    val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
+    val <- unlist(strsplit( val, split = " "))
+    ps.SL <- SuperLearner(Y = A, X = W[,val], family = binomial(), SL.library = SL.library)
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL$SL.predict, ps.SL$SL.predict)
     w <- .weight(ps.obs, gbound)
   }
   # estimate ate
-  mod <- lm(Y~ A,data = ObsData,weights = w)
+
+  mod <- lm(Y~ A, data = ObsData, weights = w)
   res_ate <-summary(mod)$coef[2,1]
   # compute 95% CI
   CI <- res_ate + 1.96*c(-1,1)*sqrt(sandwich::vcovHC(mod)[2,2])
@@ -687,7 +679,7 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform = NULL,
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate and 95% confidence intervals for three methods: IPTW, AIPTW, TMLE
 
-bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, gform = NULL, SL.library = NULL){
+bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, Ybound = 0.001, gform = NULL, SL.library = NULL){
 
   bias_TMLE <- NULL; bias_IPTW <- NULL; bias_AIPTW <- NULL
   cov_TMLE <- cov_IPTW <- cov_AIPTW <- 0
@@ -697,17 +689,19 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, gform = NULL, S
   .check_var2(Y, A, W, outcome_type, M, gbound, gGLM, gform, SL.library)
 
   # create the outcome regression formula
-  Yform <- paste ("Y~1+", paste(colnames(W), collapse = "+"))
+  if (is.null(Qform)){Qform <- paste ("Y~A+", paste(colnames(W), collapse = "+"))}
+  Qform <- stringr::str_replace_all(string = Qform, pattern = " ", repl = "")
+  if(is.null(gform)){gform=paste("A~", paste(colnames(W), collapse = "+"))}
 
   # compute the coeffs derived from the glm of outcome for original dataset
-  fit_y0 <- .fit_glm_Y(Y, A, W, Yform, outcome_type)$fit_y0
-  fit_y1 <- .fit_glm_Y(Y, A, W, Yform, outcome_type)$fit_y1
+  fit_y0 <- .fit_glm_Y(Y, A, W, Qform = Qform, outcome_type = outcome_type)$fit_y0
+  fit_y1 <- .fit_glm_Y(Y, A, W, Qform = Qform, outcome_type = outcome_type)$fit_y1
 
-  true_eff <- .trueVal(W, Yform = Yform, outcome_type = outcome_type, fit_y1, fit_y0)
+  true_eff <- .trueVal(W, Qform = Qform, outcome_type = outcome_type, fit_y1= fit_y1, fit_y0=fit_y0)
 
   # loops to create N bootstrap datasets
   for (i in 1:M){
-    bootdata <- .sim_data( A, W, Yform = Yform, outcome_type = outcome_type, fit_y1, fit_y0)
+    bootdata <- .sim_data( A, W, Qform = Qform, outcome_type = outcome_type, fit_y1= fit_y1, fit_y0=fit_y0)
 
     if (!is.null(gform) & gGLM){
       ps.GLM <- data.frame(.ps_GLM(A = bootdata$A, W = bootdata[, !names(bootdata) %in% c("Y", "A")], gform = gform, gbound = gbound)$ps_glm)
@@ -721,9 +715,9 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, gform = NULL, S
     }
 
     # compute estimates of tmle, iptw, and aiptw of the bootstrap dataset
-    tmle_res <- TMLE_ate(bootdata, Yform = Yform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
+    tmle_res <- TMLE_ate(bootdata, Qform = Qform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
     iptw_res <- IPTW_ate(bootdata, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
-    aiptw_res <- AIPTW_ate(bootdata, Yform = Yform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
+    aiptw_res <- AIPTW_ate(bootdata, Qform = Qform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
 
     # compute the bias
     bias_TMLE[i] <- tmle_res$ATE-true_eff
@@ -804,7 +798,7 @@ summary.bdt <- function(object,...){
 
     summary.bdt <- list(true.effect = object$true_Effect, gbound = object$gbound,
                         bias.iptw = summary(object$bias_IPTW), bias.aiptw = summary(object$bias_AIPTW), bias.tmle = summary(object$bias_TMLE),
-                        cov.iptw = object$cov_IPTW, cov.aiptw = object$cov_AIPTW, cov.tmle = object$cov_TMLE,
+                        cov.iptw = round(object$cov_IPTW,4), cov.aiptw = round(object$cov_AIPTW,4), cov.tmle = round(object$cov_TMLE,4),
                         ps1 = ps1.sum, ps0 = ps0.sum, ps11 = ps11.sum, ps00 = ps00.sum)
     class(summary.bdt) <- "summary.bdt"
   } else {
@@ -824,15 +818,12 @@ print.summary.bdt <- function(x,...){
 
     cat("\n\nTrue simulated data effect: ", specify_decimal(x$true.effect, 5), " \n")
 
-    i <- specify_decimal(x$bias.iptw, 5); a <- specify_decimal(x$bias.aiptw, 5); t <- specify_decimal(x$bias.tmle, 5)
-    cat("\nSummary of ATE bias based on IPTW, AIPTW and TMLE:\n\n")
-    bias_data <- data.frame(c(" IPTW:","AIPTW:"," TMLE:"), rbind(i, a, t))
-    names(bias_data) <- c("      ","   Min.  ",  " 1st Qu. "," Median ", "  Mean  ", " 3rd Qu. ", "  Max.  ")
-    gdata::write.fwf(bias_data)
-
-    cat("\n\nCoverage rate of IPTW: ", x$cov.iptw, " \n")
-    cat("Coverage rate of AIPTW: ", x$cov.aiptw, " \n")
-    cat("Coverage rate of TMLE: ", x$cov.tmle, " \n")
+    cat("\nAverage bias and coverage rates of IPTW, AIPTW and TMLE estimators:\n\n")
+    i <- specify_decimal(x$bias.iptw[4], 5); a <- specify_decimal(x$bias.aiptw[4], 5); t <- specify_decimal(x$bias.tmle[4], 5)
+    s <- specify_decimal(x$bias.iptw[3], 5); u <- specify_decimal(x$bias.aiptw[3], 5); v <- specify_decimal(x$bias.tmle[3], 5)
+    res_data <- data.frame(c(" IPTW","AIPTW"," TMLE"), c(i, a, t), c(s, u, v), c(x$cov.iptw, x$cov.aiptw, x$cov.tmle))
+    names(res_data) <- c("     ","MeanBias",  "Med.Bias", " Cov.")
+    gdata::write.fwf(res_data)
 
     cat("\n\nSummary of propensity scores truncated at gbound", x$gbound, " \n")
     p1 <- specify_decimal(x$ps1,6); p0 <- specify_decimal(x$ps0,6)
@@ -867,7 +858,8 @@ plot.bdt <- function(object,...){
     type_est <- c(rep("IPTW",N), rep("AIPTW",N),rep("TMLE",N) )
     est_data <- data.frame(type_est, c(object$bias_IPTW, object$bias_AIPTW, object$bias_TMLE))
     colnames(est_data) <- c("type_est", "Bias_ATE")
-    title <- paste("Boxplots of the ATE bias with different estimators")
+    mt = ifelse(is.null(object$ps_GLM), "SL for g", "GLM for g")
+    title <- paste0("Boxplots of the ATE bias with ", object$gbound, " gbound under ", mt)
     anno.data <- data.frame(type = c("IPTW", "AIPTW", "TMLE"), high = min(est_data$Bias_ATE)-0.03,
                             coverage = round(c(object$cov_IPTW, object$cov_AIPTW, object$cov_TMLE), 2))
     # library(ggplot2)
@@ -876,11 +868,11 @@ plot.bdt <- function(object,...){
       geom_rug(color = "black") + ggtitle(title)+
       geom_point(position = "jitter", size=0.7,color="blue", alpha=0.5)+
       geom_label(data = anno.data, aes(x = type,  y = high, label = paste("Cov: ", coverage,sep="")),
-                 label.padding = unit(0.35, "lines"), # Rectangle size around label
-                 label.size = 0.25,colour = "red", size = 2.5,fill = "white") +
+                 label.padding = unit(0.40, "lines"), # Rectangle size around label
+                 label.size = 0.35,colour = "red", size = 3.5,fill = "white") +
       geom_hline(yintercept = 0,col = "darkred",linetype = "dotted") +
       ylim(min(est_data$Bias_ATE)-0.03,max(est_data$Bias_ATE) + 0.03) +
-      ylab("ATE bias") + theme(axis.title.x = element_blank(),axis.text.x = element_text(angle=0))
+      ylab("Bias") + theme(axis.title.x = element_blank(),axis.text.x = element_text(angle=0))
 
 
     #------------------- density plot of ps ------------------
