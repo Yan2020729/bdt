@@ -11,8 +11,8 @@ ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, g
 \arguments{
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
   \item{W}{vector, matrix, or dataframe containing baseline covariates}
-  \item{gform1}{optional regression formula 1 of g; default value is "A~W"}
-  \item{gform2}{optional regression formula 2 of g; default value is "A~W"}
+  \item{gform1}{optional glm regression formula 1 of g}
+  \item{gform2}{optional glm regression formula 2 of g}
   \item{SL.library1}{vector of prediction algorithms 1 for data adaptive estimation of g}
   \item{SL.library2}{vector of prediction algorithms 2 for data adaptive estimation of g}
   \item{gbound}{bounds used to truncate g with value between (0,1) for truncation of predicted probabilities; default value is 0}
