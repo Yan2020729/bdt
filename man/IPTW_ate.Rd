@@ -17,7 +17,8 @@
 
 \value{
   \item{ATE }{a numeric value of average treatment effect}
-  \item{CI }{95\% confidence intervals computed where standard error is computed by calling \code{sandwich}}
+  \item{SD}{standard error which is computed by calling \code{sandwich}}
+  \item{CI }{95\% confidence intervals computed}
 }
 
 \references{
