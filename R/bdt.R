@@ -391,11 +391,11 @@ plot.ps <- function(object,...){
 #        and valid variable names for two treatment groups
 # output: one numerical true value
 
-.trueVal <- function (W, Qform, outcome_type, fit_y1, fit_y0){
+.trueVal <- function (Y, A, W, Qform, outcome_type, fit_y1, fit_y0){
 
   # create design matrix on Qform
   Qform <- stringr::str_replace_all(string = Qform, pattern = "A+", repl = "1")
-  designM <- model.matrix (as.formula(Qform), W)
+  designM <- model.matrix (as.formula(Qform), data.frame(Y, A, W))
 
   # compute two potential outcomes of original data
   if (identical(outcome_type,"continuous")){
@@ -443,7 +443,8 @@ plot.ps <- function(object,...){
 
   ate <- tmlemod$estimates$ATE$psi
   ci <- tmlemod$estimates$ATE$CI
-  return(list(ATE = ate, CI = ci))
+  sd <- sqrt(tmlemod$estimates$ATE$var.psi)
+  return(list(ATE = ate, SD = sd, CI = ci))
 }
 
 
@@ -542,7 +543,7 @@ AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform
     noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
     val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
     val <- unlist(strsplit( val, split = " "))
-    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W[,val], family = binomial(), SL.library = SL.library)$SL.predict)
+    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W[,val], family = binomial(),SL.library = SL.library)$SL.predict)
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL, ps.SL)
     w <- .weight(ps.obs, gbound)
   }
@@ -551,9 +552,10 @@ AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform
   mu1 <- sum((Y - Y1_hat)*A*w)/n + mean(Y1_hat); mu0 <- sum((Y - Y0_hat)*(1-A)*w)/n + mean(Y0_hat)
   res_ate <- mu1 - mu0
   IF <- ((Y-Y1_hat)*A*w + Y1_hat)-((Y - Y0_hat)*(1-A)*w + Y0_hat) - res_ate # compute the influence function
-  ci <- res_ate + c(-1,1)*1.96*sqrt( sum(IF^2)/(n^2)) # compute the standard error then the 95% CI
+  sd <- sqrt( sum(IF^2)/(n^2))
+  ci <- res_ate + c(-1,1)*1.96*sd # compute the standard error then the 95% CI
 
-  eff_aiptw <- list(ATE = res_ate, CI = ci)
+  eff_aiptw <- list(ATE = res_ate, SD = sd, CI = ci)
   return(eff_aiptw)# return list type values: ate and ci
 }
 
@@ -584,7 +586,7 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, 
     noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
     val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
     val <- unlist(strsplit( val, split = " "))
-    ps.SL <- SuperLearner(Y = A, X = W[,val], family = binomial(), SL.library = SL.library)
+    ps.SL <- SuperLearner(Y = A, X = W[,val], family = binomial(),SL.library = SL.library)
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL$SL.predict, ps.SL$SL.predict)
     w <- .weight(ps.obs, gbound)
   }
@@ -593,8 +595,9 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, 
   mod <- lm(Y~ A, data = ObsData, weights = w)
   res_ate <-summary(mod)$coef[2,1]
   # compute 95% CI
-  CI <- res_ate + 1.96*c(-1,1)*sqrt(sandwich::vcovHC(mod)[2,2])
-  eff_iptw <- list(ATE = res_ate, CI = CI)
+  sd <- sqrt(sandwich::vcovHC(mod)[2,2])
+  CI <- res_ate + 1.96*c(-1,1)*sd
+  eff_iptw <- list(ATE = res_ate, SD = sd, CI = CI)
   return(eff_iptw)# return list type values: ate, CI
 }
 
@@ -679,7 +682,7 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, 
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate and 95% confidence intervals for three methods: IPTW, AIPTW, TMLE
 
-bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, Ybound = 0.001, gform = NULL, SL.library = NULL){
+bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, gform = NULL, SL.library = NULL){
 
   bias_TMLE <- NULL; bias_IPTW <- NULL; bias_AIPTW <- NULL
   cov_TMLE <- cov_IPTW <- cov_AIPTW <- 0
@@ -697,7 +700,7 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, Y
   fit_y0 <- .fit_glm_Y(Y, A, W, Qform = Qform, outcome_type = outcome_type)$fit_y0
   fit_y1 <- .fit_glm_Y(Y, A, W, Qform = Qform, outcome_type = outcome_type)$fit_y1
 
-  true_eff <- .trueVal(W, Qform = Qform, outcome_type = outcome_type, fit_y1= fit_y1, fit_y0=fit_y0)
+  true_eff <- .trueVal(Y, A, W, Qform = Qform, outcome_type = outcome_type, fit_y1= fit_y1, fit_y0=fit_y0)
 
   # loops to create N bootstrap datasets
   for (i in 1:M){
@@ -760,7 +763,7 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, Y
 #----------------- print functions to output the estimated ate bias of AIPTW, IPTW, TMLE -------------------
 # input the results of main bias_boot function
 # return the bias of the three estimated ate
-bias.bdt <- function(object,...){
+bias.bdt <- function(object){
   if(identical(class(object), "bdt")){
     cat("Eestimated bias of ATE with IPTW, AIPTW, TMLE:\n\n")
 
@@ -856,12 +859,15 @@ plot.bdt <- function(object,...){
     #--------------------- boxplot of bias ate ------------------
     N <- length(object$bias_TMLE)
     type_est <- c(rep("IPTW",N), rep("AIPTW",N),rep("TMLE",N) )
-    est_data <- data.frame(type_est, c(object$bias_IPTW, object$bias_AIPTW, object$bias_TMLE))
+    Bias_ATE <- c(object$bias_IPTW, object$bias_AIPTW, object$bias_TMLE)
+    est_data <- data.frame(type_est, Bias_ATE)
     colnames(est_data) <- c("type_est", "Bias_ATE")
     mt = ifelse(is.null(object$ps_GLM), "SL for g", "GLM for g")
     title <- paste0("Boxplots of the ATE bias with ", object$gbound, " gbound under ", mt)
-    anno.data <- data.frame(type = c("IPTW", "AIPTW", "TMLE"), high = min(est_data$Bias_ATE)-0.03,
-                            coverage = round(c(object$cov_IPTW, object$cov_AIPTW, object$cov_TMLE), 2))
+    type = c("IPTW", "AIPTW", "TMLE")
+    high = min(est_data$Bias_ATE)-0.03
+    coverage = round(c(object$cov_IPTW, object$cov_AIPTW, object$cov_TMLE), 2)
+    anno.data <- data.frame(type, high, coverage)
     # library(ggplot2)
     est_plot <- ggplot(est_data, aes(x = as.factor(type_est), y = Bias_ATE))+
       geom_boxplot(outlier.size = 0.4, fill= "cornflowerblue", notch = FALSE)+
@@ -871,7 +877,7 @@ plot.bdt <- function(object,...){
                  label.padding = unit(0.40, "lines"), # Rectangle size around label
                  label.size = 0.35,colour = "red", size = 3.5,fill = "white") +
       geom_hline(yintercept = 0,col = "darkred",linetype = "dotted") +
-      ylim(min(est_data$Bias_ATE)-0.03,max(est_data$Bias_ATE) + 0.03) +
+      ylim(min(Bias_ATE)-0.03, max(Bias_ATE) + 0.03) +
       ylab("Bias") + theme(axis.title.x = element_blank(),axis.text.x = element_text(angle=0))
 
 
