@@ -1,7 +1,7 @@
 \name{plot.ps}
 \alias{plot.ps}
 \title{Plotting of the results of a call to the ps function}
-description{This functions is \link{methods} for class \code{ps} objects.}
+\description{This functions is \link{methods} for class \code{ps} objects.}
 
 \usage{
   \method{plot}{ps}(object, \dots)}
