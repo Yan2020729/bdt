@@ -4,18 +4,19 @@
 \description{bdt is to compute the bias of three ate estimators: inverse probability treatment weighting (IPTW), augmented inverse probability treatment weighting (AIPTW) and targeted maximum likelihood estimator (TMLE) and their corresponding coverage rates. This function returns the propensity scores for all subjects and for subgroups with A=1 and A=0 as well. The \code{bdt} function is generally called with arguments \code{(Y,A,W)}, where \code{Y} is a continuous or binary outcome variable, \code{A} is a binary treatment variable, (\code{A=1} for treatment, \code{A=0} for control), and \code{W} is a matrix or dataframe of baseline covariates. The number of replications is identified using the \code{M} argument.
 }
 
-\usage{bdt(Y, A, W, outcome_type, M, gbound=0.025, gGLM, gform=NULL, SL.library=NULL)}
+\usage{bdt(Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, gform = NULL, SL.library = NULL)}
 
 \arguments{
   \item{Y}{continuous or binary outcome variable}
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
   \item{W}{vector, matrix, or dataframe containing baseline covariates}
   \item{M}{the number of replications to generate bootstrap datasets}
+  \item{outcome_type}{"continuous" or "binary"}
+  \item{Qform}{regression formula of outcome}
   \item{gGLM}{if TRUE, GLM is used to estimate g; otherwise call \code{SuperLearner}}
   \item{gform}{optional regression formula of g; default value is "A~W"}
   \item{gbound}{value between (0,1) for truncation of predicted probabilities; default value is 0.025}
   \item{SL.library}{vector of prediction algorithms for data adaptive estimation of g}
-  \item{outcome_type}{"continuous" or "binary"}
 }
 
 \value{
@@ -65,12 +66,12 @@
   A <- rbinom(n, 1, plogis(0.2+ W[,"W1"]+0.3*W[,"I1"]+W[,"W1"]*W[,"I1"]-0.2*(W[,"W2"]+W[,"I2"])^2 ))
   Y <-  1 + A + W[,"W1"] + 2*W[,"W2"] + 0.5*(W[,"W1"]+W[,"P1"])^2 + rnorm(n)
 
-  result1 <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE, gform = "A~W2+W1+I1+I2+P1", M = 100)
+  result1 <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE, Qform= "Y~A+W1+W2+I1+I2+P1", gform = "A~W2+W1+I1+I2+P1", M = 100)
   summary(result1)
 
 # User-supplied SuperLearner function to estimate g
 
-  result2 <- bdt(Y, A, W, outcome_type ="continuous", gGLM = FALSE, SL.library = "SL.gam", M = 100)
+  result2 <- bdt(Y, A, W, outcome_type ="continuous", gGLM = FALSE, Qform= "Y~A+W1+W2+I1+I2+P1", SL.library = c("SL.gam", "SL.glm"), M = 100)
   summary(result2)
 }
 
