@@ -10,12 +10,14 @@ import(gdata)
 import(ggplot2)
 import(ggpubr)
 importFrom("graphics", "par")
-importFrom("stats", "as.formula", "binomial", "formula", "glm", "lm",
-                "predict", "predict.glm", "rbinom")
+importFrom("stats", "as.formula", "binomial", "formula", "glm", "lm", "model.matrix", "plogis",
+                "predict", "predict.glm", "rbinom", "coef", "rnorm")
 S3method(print, summary.bdt)
 S3method(summary, bdt)
 S3method(plot, bdt)
 S3method(bias, bdt)
+S3method(plot, ps)
+S3method(summary, ps)
 
 
 ##
