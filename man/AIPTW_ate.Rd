@@ -4,11 +4,11 @@
 
 \description{Using AIPTW to estimate the additive effect where the outcome model is fitted by a "true" GLM and the propensity is modeled by SuperLearner (SL) and/or logistic regression. User could define the regression formula for propensity in GLM or the SL functions in SL.
 }
-\usage{AIPTW_ate(ObsData, Yform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library)}
+\usage{AIPTW_ate(ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library)}
 
 \arguments{
   \item{ObsData}{a given dataset containing continuous or binary outcome \code{Y}, binary treatment \code{A}, and a set of potential confounders \code{W} based on observing n i.i.d. observations on (W,A,Y). Missing values are not allowed.}
-  \item{Yform}{regression formula of outcome}
+  \item{Qform}{regression formula of outcome}
   \item{gGLM}{if TRUE, GLM is used to estimate g; otherwise call \code{SuperLearner}}
   \item{gform}{optional regression formula of g; default value is "A~W"}
   \item{gbound}{value between (0,1) for truncation of predicted probabilities; default value is 0.025}
@@ -18,7 +18,8 @@
 
 \value{
   \item{ATE }{a numeric value of average treatment effect}
-  \item{CI }{95\% confidence intervals where standard error is computed by influence function}
+  \item{SD }{standard error which is computed by influence function}
+  \item{CI }{95\% Wald-type confidence intervals}
 }
 
 \references{
