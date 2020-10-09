@@ -1,13 +1,11 @@
-\name{bias.bdt}
+\name{bias}
 \alias{bias.bdt}
 \alias{bias}
 \title{ATE bias of IPTW, AIPTW and TMLE }
 \description{\code{bias.bdt} is for class \code{bdt} objects which returns a dataframe of ATE bias of IPTW, AIPTW and TMLE of by a call to the bdt function; \code{bias} is \link{methods} for class \code{bdt}}
 
 \usage{
-  \method{bias}{bdt}(object, \dots)
-  \item{\dots}{currently ignored.}
-  %\method{bias}(x)
+  \method{bias}{bdt}(object)
   bias(x)
 }
 
