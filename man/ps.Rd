@@ -6,7 +6,8 @@
 Probabilities of being treated and not being treated for all subjects and for subgroups \code{A=1} and \code{A=0}. Estimates could be computing by using two choices of GLM and/or SuperLearner.
 }
 \usage{
-ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE)}
+ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL,
+SL.library2 = NULL, gbound = 0, verbose = FALSE)}
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
@@ -40,11 +41,13 @@ ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, g
   colnames(W) <- c("W1", "W2", "I1", "I2",  "P1")
   A <- rbinom(n, 1, plogis(0.2+ W[,"W1"]+0.3*W[,"I1"]+W[,"W1"]*W[,"I1"]-0.2*(W[,"W2"]+W[,"I2"])^2))
 
-  ps1 <- ps(A,W,gform1 = "A~W2+W1+I1+I2",gform2 = "A~W1+I1+I2+W1*W2",SL.library1 ="SL.glmnet",gbound=0,verbose = FALSE)
+  ps1 <- ps(A,W,gform1 = "A~W2+W1+I1+I2",gform2 = "A~W1+I1+I2+W1*W2",
+  SL.library1 ="SL.glmnet",gbound=0,verbose = FALSE)
 
 # or
 
-  ps2 <- ps(A,W,gform1 = "A~W2+W1+I1+I2",SL.library1 ="SL.glmnet",SL.library2 = "SL.gam",gbound = 0, verbose = FALSE)
+  ps2 <- ps(A,W,gform1 = "A~W2+W1+I1+I2",SL.library1 ="SL.glmnet",
+  SL.library2 = "SL.gam",gbound = 0, verbose = FALSE)
 }
 
 \references{
