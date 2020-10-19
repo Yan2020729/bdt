@@ -4,11 +4,21 @@
 \description{
   This functions is \link{methods} for class \code{bdt} objects}
 \usage{
-  \method{plot}{bdt}(object, \dots)}
+  \method{plot}{bdt}(x, xlab = NULL, ylab = "Bias", outlierSize= 0.4, notch = FALSE, pointsize = 0.7, pointcol = "blue", labelsize = 0.35, labelcol = "red", linetype = "dotted", linecol = "darkred", ...)}
 
 \arguments{
-  \item{object}{an object of class \code{bdt}.}
-  \item{\dots}{currently ignored.}
+  \item{x}{an object of class \code{bdt}.}
+  \item{xlab}{x-asix label. Default value is NULL.}
+  \item{ylab}{x-asix label. Default is "Bias".}
+  \item{outlierSize}{the point size of outlier. Default is 0.4}
+  \item{notch}{notch for boxplot. Default value is FALSE. }
+  \item{pointsize}{the size of point. Default is 0.7. }
+  \item{pointcol}{the color of points. Default is blue.}
+  \item{labelsize}{the size of the label of coverage rates. Default is 0.35. }
+  \item{labelcol}{the color of the label of coverage rates. Default is red. }
+  \item{linetype}{the type of reference line. Default is dotted line. }
+  \item{linecol}{the color of reference line. Default is darkred. }
+  \item{...}{graphics parameters to be passed to the plotting routines.}
 }
 
 \value{
