@@ -46,7 +46,8 @@
   P1 <- rnorm(n,mean = 1, sd = 1.5)
   W <- data.frame(X, I1, I2, P1)
   colnames(W) <- c("W1", "W2", "I1", "I2",  "P1")
-  A <- rbinom(n, 1, plogis(0.2 + W[,"W1"] + 0.3*W[,"I1"] + W[,"W1"]*W[,"I1"] - 0.2*(W[,"W2"] + W[,"I2"])^2 ))
+  A <- rbinom(n, 1, plogis(0.2 + W[,"W1"] + 0.3*W[,"I1"] + W[,"W1"]*W[,"I1"]
+  - 0.2*(W[,"W2"] + W[,"I2"])^2 ))
   Y <-  1 + A + W[,"W1"] + 2*W[,"W2"] + 0.5*(W[,"W1"] + W[,"P1"])^2 + rnorm(n)
 
   result <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE, gform = "A~W2+W1+I1", M = 100)
