@@ -12,7 +12,6 @@
 \arguments{
   \item{object}{an object of class \code{bdt} for \code{bias.bdt} functions.}
   \item{x}{an object of class \code{bdt} for \code{bias} functions.}
-  \item{\dots}{currently ignored.}
 }
 
 \value{\item{bias.ate}{a dataframe of ATE bias with three columns: bias of IPTW, bias of AIPTW and bias of TMLE}}
