@@ -19,9 +19,10 @@ S3method(bias, bdt)
 S3method(plot, ps)
 S3method(summary, ps)
 
-
+export(ps)
+export(bdt)
 ##
-exportPattern("^[^\\\\.]")
+#exportPattern("^[^\\\\.]")
 
 
 
