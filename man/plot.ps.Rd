@@ -4,11 +4,14 @@
 \description{This functions is \link{methods} for class \code{ps} objects.}
 
 \usage{
-  \method{plot}{ps}(object, \dots)}
+  \method{plot}{ps}(x, xlab_name = c("log(1/g_1)", "log(1/g_0)", "log(1/g_1)[A=1]",
+  "log(1/g_0)[A=0]"), cols = c("red", "green", "blue", "orange"),...)}
 
 \arguments{
-  \item{object}{an object of class \code{ps} for summary functions.}
-  \item{\dots}{currently ignored.}
+  \item{x}{an object of class \code{ps} for plot functions.}
+  \item{xlab_name}{the name of x-axis for four plots.}
+  \item{cols}{the color of curves. }
+  \item{...}{currently ignored.}
 }
 
 \value{
