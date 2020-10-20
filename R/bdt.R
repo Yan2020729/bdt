@@ -1,50 +1,4 @@
 
-#---------------------------------------------- Description ------------------------------------------
-# This R code implements adapted bootstrap diagnostic tool (BDT), originally described in Bahamyirou A, Blais L,
-# Forget A, Schnitzer ME. "Understanding and diagnosing the potential for bias when using machine learning
-# methods with doubly robust causal estimators."Statistical Methods in Medical Research. 2019 Jun;28(6):1637-50.
-
-# This bootstrap diagnostic tool (BDT) is to identify the instability in the estimation of marginal causal effects
-# in the presence of near practical positivity violations. Data-adaptive methods can produce a separation of the
-# two exposure groups in terms of propensity score densities which can lead to biased finite-sample estimates
-# of the treatment effect. BDT is based on a bootstrap resampling of the subjects and simulation of the outcome
-# data conditional on observed treatment and covariates in order to diagnose whether the estimation using data-adaptive
-# methods for the propensity score may lead to large bias and poor coverage in the finite sample.
-
-# The parameter of interest in this program is the additive effect of a binary point treatment- A, on an outcome- Y
-# (binary and/or continuous), adjusting for a set of potential confounders- W based on observing n i.i.d. observations
-# on (W,A,Y). Missing data are not allowed.
-#
-# Super Learner (SL) [1] is used for the data-adaptive estimation of the propensity score. This package calls the function
-# SuperLearner in the package SuperLearner [2]. This package also depends on the implementation of Targeted maximum likelihood
-# estimation (TMLE) [3] in the package tmle [4]. Inverse probability of treatment weighting (IPTW) and augmented inverse
-# probability of treatment weighting (AIPTW) [5] are also implemented in this package.
-#
-# There are six stages:
-# Stage 1:  For a given observed dataset (A, W), use GLM and/or SL to estimate the propensity score and plot the distribution for treatment A=1 and A=0 for all subjects and for subgroups A=1, A=0.
-# Stage 2:  For an observed dataset with n subjects, fit a GLM of Y on W for each of the two subgroups with A=1,0. The outcome regression only includes the main terms of W.
-# Stage 3:  Create bootstrap datasets by resampling the n subjects with replacement and removing the observed outcome values. The new outcome realizations are predicted using the estimated coefficients from the 2nd Stage.
-# Stage 4:  Compute the "true" effect of the bootstrap datasets. We achieve this by computing the difference of the two potential outcomes using the estimated coefficients from the 2nd stage.
-# Stage 5:  Use three different approaches to estimate the additive effect where the outcome model is "true" GLM (specified in Stage 2) and the propensity score is modeled by SL and/or logistic regression of A on W as specified by the user:
-#           1) TMLE, 2) IPTW, and 3) AIPTW.
-#           The user can define the regression formula for the propensity in GLM or the SL functions in SL.
-#           There is no default SL function.
-#           Default GLM formula: A~W.
-#           Default bound on the propensity score is 0.025.
-# Stage 6:  Compute the bias of the estimates and the coverage rates then give a summary of the results over the bootstraps (numerical and boxplot).
-#           The output of the main function includes each estimated propensity score and  the corresponding density plots for the combined treatment groups and separately.
-#
-# References:
-# [1] Van der Laan, M.J., Polley, E.C. and Hubbard, A.E., 2007. Super learner. Statistical applications in genetics and molecular biology, 6(1).
-# [2] Polley E, LeDell E, Kennedy C, Lendle S, van der Laan M. 2019. Package 'SuperLearner'.
-# [3] Van Der Laan MJ, Rubin D. 2006. Targeted maximum likelihood learning. The international journal of biostatistics. 28;2(1).
-# [4] Gruber, S., Van der Laan, M. J. 2011. tmle: An R package for targeted maximum likelihood estimation.
-# [5] van der Laan, M.J. and Luedtke, A.R., 2014. Targeted learning of an optimal dynamic treatment, and statistical inference for its mean outcome.
-
-
-
-#-----------------------------------------------------------------------------------------------------
-# rm(list=ls())
 
 ############################################################################################################
 #------------------------------------------------ Stage 2 --------------------------------------------------
@@ -188,7 +142,7 @@
 #------------------------- helper function to estimate ate by TMLE ------------------------------------
 # gform: user defined form
 # SL.library: user defined library in SL
-# output: the estimated ATE and confidence intervals
+# output: the estimated ATE, sd and 95% confidence intervals
 
 .tmle_mod <- function(Y, A, W, Qform, gform = NULL, SL.library, gbound = gbound, outcome_type){
   # library(tmle)
@@ -210,12 +164,13 @@
 #------------------------ main function of TMLE to estimate ATE with flexible g (SL or GLM) ----------------------
 
 # input: one observed dataset with outcome- Y(binary and/or continuous),binary treatment A and potential confounders W
-# gform -- optional regression formula for estimating the  P(A=1|W)
+# gform -- optional regression formula for estimating P(A=1|W)
+# Qform -- regression formula for estimating P(Y=1|A, W)
 # gbound -- bound on P(A=1|W), defaults to 0.025
 # gGLM -- logical: if TRUE, use GLM; otherwise use SL
 # User could define gform in GLM, default is A~W
 # SL.library -- prediction algorithms for data adaptive estimation of g
-# returns: the estimated ate and 95% confidence interval
+# returns: the estimated ate, sd and 95% confidence interval
 
 TMLE_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
 
@@ -261,7 +216,7 @@ TMLE_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform 
 # gGLM -- logical: if TRUE, use GLM; otherwise use SL
 # User could define gform in GLM, default is A~W
 # SL.library -- prediction algorithms for data adaptive estimation of g
-# returns: the estimated ate and 95% confidence interval
+# returns: the estimated ate, sd and 95% confidence interval
 #
 AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
 
@@ -322,7 +277,7 @@ AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform
 # gGLM -- logical: if TRUE, use GLM; otherwise use SL
 # User could define gform in GLM, default is A~W
 # SL.library -- prediction algorithms for data adaptive estimation of g
-# returns: the estimated ate and 95% confidence interval
+# returns: the estimated ate, sd and 95% confidence interval
 
 IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, SL.library){
   Y <- ObsData$Y
@@ -426,12 +381,12 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, 
 # input: outcome- Y(binary and/or continuous); binary treatment A; a set of potential confounders- W
 # outcome_type -- "continuous" or "binary"
 # M is the number of replications
-# gform -- optional regression formula for estimating the  P(A=1|W)
+# gform -- optional regression formula for estimating P(A=1|W), default is A~W
+# Qform -- regression formula for estimating P(Y=1|A, W), default is Y~A,W
 # gbound -- bound on P(A=1|W), defaults to 0.025
 # gGLM -- logical: if TRUE, use GLM; otherwise use SL
-# User could define gform in GLM, default is A~W
 # SL.library -- prediction algorithms for data adaptive estimation of g
-# returns: the estimated ate and 95% confidence intervals for three methods: IPTW, AIPTW, TMLE
+# returns: the estimated ate and 95% confidence intervals for three methods: IPTW, AIPTW, TMLE and pooled ps.
 
 bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, gform = NULL, SL.library = NULL){
 
