@@ -2,15 +2,23 @@ Package: bdt
 Type: Package
 Title: Bootstrap Diagnostic Tool 
 Version: 0.1.0
+Authors@R: 
+    c(
+    person("Yan", "Liu", role = c("aut", "cre"), email = "yan.liu.7@umontreal.ca"),
+    person("Mireille", "Schnitzer", role = "aut", email = "mireille.schnitzer@umontreal.ca"),
+    person("Asma", "Bahamyirou", role = "aut", email = "asma.bahamyirou@umontreal.ca"))
 Author: 
     Yan Liu [aut, cre],
     Mireille Schnitzer [aut],
     Asma Bahamyirou [aut]
 Maintainer: Yan Liu <yan.liu.7@umontreal.ca>
 Depends: R(>= 3.1.0), tmle(>= 1.4.0), SuperLearner(>= 2.0), ggplot2
+URL: https://github.com/Yan2020729/bdt
 Imports: glmnet, gam (>= 1.15), sandwich, stringr, gdata, ggpubr
 Description: This bootstrap diagnostic tool (BDT) is to identify the instability in the estimation of marginal causal effects in the presence of near practical positivity violations. Data-adaptive methods can produce a separation of the two exposure groups in terms of propensity score densities which can lead to biased finite-sample estimates of the treatment effect. BDT is based on bootstrap resampling of the subjects and simulation of the outcome data in order to diagnose whether the estimation using inverse probability treatment weighting (IPTW), augmented inverse probability treatment weighting (AIPTW) and targeted maximum likelihood estimator (TMLE) for the propensity score may lead to large bias and poor coverage.
 License: GPL
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
+NeedsCompilation: no
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
