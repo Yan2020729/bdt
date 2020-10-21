@@ -18,9 +18,12 @@ S3method(plot, bdt)
 S3method(bias, bdt)
 S3method(plot, ps)
 S3method(summary, ps)
-
+export(TMLE_ate)
+export(AIPTW_ate)
+export(IPTW_ate)
 export(ps)
 export(bdt)
+export(bias)
 ##
 #exportPattern("^[^\\\\.]")
 
