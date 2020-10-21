@@ -479,7 +479,7 @@ bias.bdt <- function(object){
     stop("Object must have class 'bdt'")}
   return(bias.ate)
 }
-bias <- function(x){ UseMethod("bias",x)}
+bias <- function(object){ UseMethod("bias",object)}
 
 
 
