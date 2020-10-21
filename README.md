@@ -1,12 +1,6 @@
 ### bdt
 The R package **bdt** implements adapted bootstrap diagnostic tool (BDT), originally described in Bahamyirou A, Blais L, Forget A, Schnitzer ME. *Understanding and diagnosing the potential for bias when using machine learning methods with doubly robust causal estimators*. Statistical Methods in Medical Research. 2019 Jun;28(6):1637-50. Data-adaptive methods can produce a separation of the two exposure groups in terms of propensity score densities which can lead to biased finite-sample estimates of the treatment effect. Bahamyirou et al. presented a diagnostic tool to identify the instability in the estimation of marginal causal effects in the presence of near practical positivity violations.  To expedite the application of this diagnostic tool, we develop **bdt** package which is based on a bootstrap resampling of the subjects and simulation of the outcome data conditional on observed treatment and covariates.  You can install the current version of with: 
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
 ```{r, eval=FALSE}
 install.packages("devtools")
 devtools::install_github("Yan2020729/bdt")
