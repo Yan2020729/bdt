@@ -505,10 +505,21 @@ summary.bdt <- function(object,...){
       ps11.sum = summary(smda[smda$A==1,]$ps)
       ps00.sum = summary(1-smda[smda$A==0,]$ps)}
 
+    bias <- data.frame(rbind(summary(object$bias_IPTW), summary(object$bias_AIPTW), summary(object$bias_TMLE)))
+    dimnames(bias) <- list(c("Bias of IPTW", "Bias of AIPTW", "Bias of TMLE"),
+                           c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max."))
+    coverage <- paste0("Coverage rate of IPTW: ", round(object$cov_IPTW,4),
+                      ";  Coverage rate of AIPTW: ",round(object$cov_AIPTW,4),
+                      ";  Coverage rate of TMLE: ",round(object$cov_TMLE,4))
+    ps <- data.frame(rbind(ps1.sum, ps0.sum, ps11.sum, ps00.sum))
+    dimnames(ps) <- list(c("P(A=1|X) for all subjects", "P(A=0|X) for all subjects",
+                      "P(A=1|X) for subgroups A=1", "P(A=0|X) for subgroups A=0"),
+                      c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max."))
     summary.bdt <- list(true.effect = object$true_Effect, gbound = object$gbound,
-                        bias.iptw = summary(object$bias_IPTW), bias.aiptw = summary(object$bias_AIPTW), bias.tmle = summary(object$bias_TMLE),
-                        cov.iptw = round(object$cov_IPTW,4), cov.aiptw = round(object$cov_AIPTW,4), cov.tmle = round(object$cov_TMLE,4),
-                        ps1 = ps1.sum, ps0 = ps0.sum, ps11 = ps11.sum, ps00 = ps00.sum)
+                      bias.iptw = summary(object$bias_IPTW), bias.aiptw = summary(object$bias_AIPTW), bias.tmle = summary(object$bias_TMLE),
+                      cov.iptw = round(object$cov_IPTW,4), cov.aiptw = round(object$cov_AIPTW,4), cov.tmle = round(object$cov_TMLE,4),
+                      bias = bias,  coverage = coverage, ps = ps)
+
     class(summary.bdt) <- "summary.bdt"
   } else {
     stop("Object must have class 'bdt'")
@@ -534,14 +545,8 @@ print.summary.bdt <- function(x,...){
     names(res_data) <- c("     ","MeanBias",  "Med.Bias", " Cov.")
     gdata::write.fwf(res_data)
 
-    cat("\n\nSummary of propensity scores truncated at gbound", x$gbound, " \n")
-    p1 <- specify_decimal(x$ps1,6); p0 <- specify_decimal(x$ps0,6)
-    p11 <- specify_decimal(x$ps11,6); p00 <- specify_decimal(x$ps00,6)
-    cat("\n                                  Min.       1st Qu.     Median      Mean      3rd Qu.   Max.")
-    cat("\n     P(A=1|X) for all subjects: ", p1[1], " ", p1[2], " ",p1[3], " ",p1[4], " ",p1[5], " ",p1[6])
-    cat("\n     P(A=0|X) for all subjects: ", p0[1], " ", p0[2], " ",p0[3], " ",p0[4], " ",p0[5], " ",p0[6])
-    cat("\n    P(A=1|X) for subgroups A=1: ", p11[1], " ", p11[2], " ",p11[3], " ",p11[4], " ",p11[5], " ",p11[6])
-    cat("\n    P(A=0|X) for subgroups A=0: ", p00[1], " ", p00[2], " ",p00[3], " ",p00[4], " ",p00[5], " ",p00[6])
+    cat("\n\nSummary of propensity scores truncated at gbound", x$gbound, " \n\n")
+    print(x$ps)
   }
 }
 
@@ -559,7 +564,6 @@ print.summary.bdt <- function(x,...){
 #         B--treatment A=0 in subset of subjects with A=0
 #         C--treatment A=1 for all subjects
 #         D--treatment A=0 for all subjects
-
 
 plot.bdt <- function(x, xlab = NULL, ylab = "Bias", outlierSize= 0.4, notch = FALSE,
                      pointsize = 0.7, pointcol = "blue", labelsize = 0.35, labelcol = "red",
