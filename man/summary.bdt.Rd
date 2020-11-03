@@ -16,16 +16,16 @@
 
 \value{
   \item{true_Effect}{the true ate with respect to bootstrap datasets}
+  \item{gbound}{the bounding for propensity scores used defined}
   \item{bias.iptw}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of IPTW bias ate over \code{M} replications }
   \item{bias.aiptw}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of AIPTW bias ate over \code{M} replications }
   \item{bias.tmle}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of TMLE bias ate over \code{M} replications }
   \item{cov.iptw}{the coverage rate over \code{M} replications}
   \item{cov.aiptw}{the coverage rate over \code{M} replications}
   \item{cov.tmle}{the coverage rate over \code{M} replications}
-  \item{ps1}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of probability of being treated \eqn{P(A=1|W)} for all subjects across \code{M} replications }
-  \item{ps0}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of probability of not being treated \eqn{P(A=0|W)} for all subjects across \code{M} replications }
-  \item{ps11}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of probability of being treated for subgroups with \code{A=1} across \code{M} replications }
-  \item{ps00}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of probability of not being treated for subgroups with \code{A=0}  across \code{M} replications }
+  \item{coverage}{summary of three coverage rates over \code{M} replications}
+  \item{bias}{a data frame of summaries of three bias over \code{M} replications}
+  \item{ps}{a data frame of summaries of pooled probabilities over \code{M} replications}
 }
 
 \details{\code{print.summary.bdt}, called indirectly by entering the command \kbd{summary(result)} (where \code{result} has class \code{bdt}).}
