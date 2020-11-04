@@ -161,6 +161,33 @@
 }
 
 
+.convertCategor <- function(W, gform, Qform){
+  if (any(lapply(W, is.factor) == TRUE)){
+    cat_names <- names(W)[lapply(W, is.factor) == TRUE]
+    # extract baseline variable names from gform
+    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
+    g_val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
+    g_val <- unlist(strsplit( g_val, split = " "))
+
+    noSpace.Qform <- stringr::str_replace_all(string=Qform, pattern=" ", repl="")
+    Q_val <- chartr(old = "+", new = " ", substring(noSpace.Qform, 5))
+    Q_val <- unlist(strsplit( Q_val, split = " "))
+
+    W = fastDummies::dummy_cols(W, remove_first_dummy = TRUE)
+    W = W[, !names(W) %in% c(cat_names)]
+
+    gform_cat <- stringr::str_c(c(unlist(sapply(1:length(g_val), function(x)
+      names(W)[stringr::str_detect(names(W), g_val[x])]))), collapse = "+")
+    gform <- paste0("A~", gform_cat)
+
+    Qform_cat <- stringr::str_c(c(unlist(sapply(1:length(Q_val), function(x)
+      names(W)[stringr::str_detect(names(W), Q_val[x])]))), collapse = "+")
+    Qform <- paste0("Y~A+", Qform_cat)
+  }
+  return(list(W=W, gform=gform, Qform=Qform))
+}
+
+
 #------------------------ main function of TMLE to estimate ATE with flexible g (SL or GLM) ----------------------
 
 # input: one observed dataset with outcome- Y(binary and/or continuous),binary treatment A and potential confounders W
@@ -179,8 +206,11 @@ TMLE_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform 
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
 
-  # according to the logical value of gGLM, use GLM or SL to estimate ate
   if (is.null(gform)){gform <- paste("A~", paste(colnames(W), collapse="+"))}
+  coverCate <- .convertCategor(W, gform, Qform)
+  W = coverCate$W; Qform = coverCate$Qform; gform = coverCate$gform
+
+  # according to the logical value of gGLM, use GLM or SL to estimate ate
   if (gGLM){ # if gGLM is true, use GLM
     eff_tmle <- .tmle_mod(Y, A, W, gbound = gbound, outcome_type = outcome_type, Qform = Qform, gform = gform)
   }else { # if gGLM is FALSE, use SL
@@ -246,10 +276,7 @@ AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform
   if (gGLM){w <- .weight.glm(ObsData, gform, gbound)
   }else {
     # library(SuperLearner)
-    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
-    val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
-    val <- unlist(strsplit( val, split = " "))
-    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W[,val], family = binomial(),SL.library = SL.library)$SL.predict)
+    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W, family = binomial(),SL.library = SL.library)$SL.predict)
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL, ps.SL)
     w <- .weight(ps.obs, gbound)
   }
@@ -289,10 +316,7 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, 
   if (gGLM){w <- .weight.glm(ObsData, gform, gbound)
   }else {
     # library(SuperLearner)
-    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
-    val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
-    val <- unlist(strsplit( val, split = " "))
-    ps.SL <- SuperLearner(Y = A, X = W[,val], family = binomial(),SL.library = SL.library)
+    ps.SL <- SuperLearner(Y = A, X = W, family = binomial(),SL.library = SL.library)
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.SL$SL.predict, ps.SL$SL.predict)
     w <- .weight(ps.obs, gbound)
   }
@@ -401,6 +425,10 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
   if (is.null(Qform)){Qform <- paste ("Y~A+", paste(colnames(W), collapse = "+"))}
   Qform <- stringr::str_replace_all(string = Qform, pattern = " ", repl = "")
   if(is.null(gform)){gform=paste("A~", paste(colnames(W), collapse = "+"))}
+
+  # test factors in W and change to dummy variables
+  coverCate <- .convertCategor(W, gform, Qform)
+  W = coverCate$W; Qform = coverCate$Qform; gform = coverCate$gform
 
   # compute the coeffs derived from the glm of outcome for original dataset
   fit_y0 <- .fit_glm_Y(Y, A, W, Qform = Qform, outcome_type = outcome_type)$fit_y0
