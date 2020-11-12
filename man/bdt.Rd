@@ -1,7 +1,7 @@
 \name{bdt}
 \alias{bdt}
 \title{Bootstrap Diagnostic Tool}
-\description{bdt is to compute the bias of three ate estimators: inverse probability treatment weighting (IPTW), augmented inverse probability treatment weighting (AIPTW) and targeted maximum likelihood estimator (TMLE) and their corresponding coverage rates. This function returns the propensity scores for all subjects and for subgroups with A=1 and A=0 as well. The \code{bdt} function is generally called with arguments \code{(Y,A,W)}, where \code{Y} is a continuous or binary outcome variable, \code{A} is a binary treatment variable, (\code{A=1} for treatment, \code{A=0} for control), and \code{W} is a matrix or dataframe of baseline covariates. The number of replications is identified using the \code{M} argument.
+\description{bdt is to compute the bias of three ate estimators: inverse probability treatment weighting (IPTW), augmented inverse probability treatment weighting (AIPTW) and targeted maximum likelihood estimator (TMLE) and their corresponding coverage rates. This function returns the propensity scores for all subjects and for subgroups with A=1 and A=0 as well. The \code{bdt} function is generally called with arguments \code{(Y,A,W)}, where \code{Y} is a continuous or binary outcome variable, \code{A} is a binary treatment variable, (\code{A=1} for treatment, \code{A=0} for control), and \code{W} is a matrix or dataframe of baseline covariates. It may contain factors. The number of replications is identified using the \code{M} argument.
 }
 
 \usage{bdt(Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL,
@@ -10,7 +10,7 @@ gform = NULL, SL.library = NULL)}
 \arguments{
   \item{Y}{continuous or binary outcome variable}
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
-  \item{W}{vector, matrix, or dataframe containing baseline covariates}
+  \item{W}{vector, matrix, or dataframe containing baseline covariates. It may contain factors.}
   \item{M}{the number of replications to generate bootstrap datasets}
   \item{outcome_type}{"continuous" or "binary"}
   \item{Qform}{regression formula of outcome}
