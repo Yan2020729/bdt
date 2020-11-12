@@ -7,7 +7,7 @@
 \usage{TMLE_ate(ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library)}
 
 \arguments{
-  \item{ObsData}{a given dataset containing continuous or binary outcome \code{Y}, binary treatment \code{A}, and a set of potential confounders \code{W} based on observing n i.i.d. observations on (W,A,Y). Missing values are not allowed.}
+  \item{ObsData}{a given dataset containing continuous or binary outcome \code{Y}, binary treatment \code{A}, and a set of potential confounders \code{W} based on observing n i.i.d. observations on (W,A,Y). W may contain factors. Missing values are not allowed.}
   \item{Qform}{regression formula of outcome}
   \item{gGLM}{if TRUE, GLM is used to estimate g; otherwise call \code{SuperLearner}}
   \item{gform}{optional regression formula of g; default value is "A~W"}
