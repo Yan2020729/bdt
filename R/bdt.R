@@ -188,6 +188,29 @@
 }
 
 
+.check_gMeth <- function(gGLM, gform, SL.library){
+  if (gGLM){
+    if (!is.null(gform)){
+      if (!is.null(SL.library)) {# if user set gGLM is TRUE, define both gform and SL function simultaneously
+        cat("Estimating ate using user-supplied regression formula and ignoring supplied SuperLearner functions for g \n\n")}
+      else (cat("Estimating ate using user-supplied regression formula for g \n\n"))
+    }
+    else {
+      if (!is.null(SL.library)) {# if user set gGLM is TRUE but define SL function instead of gform
+        cat("Estimating ate ignoring supplied SuperLearner functions and using default regression formula 'A~ W' for g \n\n")}
+      else (cat("Estimating ate using default regression formula 'A~ W' for g \n\n"))
+    }
+  }
+  else {
+    if (!is.null(SL.library)){
+      if (!is.null(gform)){
+        cat("Estimating ate using user-supplied SuperLearner functions and ignoring supplied regression formula for g \n\n")}
+      else {cat("Estimating ate using user-supplied SuperLearner functions for g \n\n")}
+    }
+    else (stop("Please specify SuperLearner library for g. \n\n"))
+  }
+}
+
 #------------------------ main function of TMLE to estimate ATE with flexible g (SL or GLM) ----------------------
 
 # input: one observed dataset with outcome- Y(binary and/or continuous),binary treatment A and potential confounders W
@@ -199,14 +222,17 @@
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate, sd and 95% confidence interval
 
-TMLE_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
+TMLE_ate <- function (ObsData, Qform = NULL, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library = NULL, gMeth = FALSE){
 
   # library(tmle)
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
 
+  if (gMeth){.check_gMeth(gGLM, gform, SL.library)} # if gMeth=TRUE, show the status message
+
   if (is.null(gform)){gform <- paste("A~", paste(colnames(W), collapse="+"))}
+  if (is.null(Qform)){Qform <- paste ("Y~A+", paste(colnames(W), collapse = "+"))}
   coverCate <- .convertCategor(W, gform, Qform)
   W = coverCate$W; Qform = coverCate$Qform; gform = coverCate$gform
 
@@ -248,12 +274,15 @@ TMLE_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform 
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate, sd and 95% confidence interval
 #
-AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library){
+AIPTW_ate <- function (ObsData, Qform = NULL, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library  = NULL, gMeth = FALSE){
 
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
   n <- length(Y)
+
+  if (gMeth){.check_gMeth(gGLM, gform, SL.library)} # if gMeth=TRUE, show the status message
+  if (is.null(Qform)){Qform <- paste ("Y~A+", paste(colnames(W), collapse = "+"))}
 
   # get the potential outcome based on the coeffs of glm on original data
   designM1 <- model.matrix (as.formula(Qform), data.frame(A=1, W))
@@ -306,10 +335,12 @@ AIPTW_ate <- function (ObsData, Qform, outcome_type, gGLM, gbound = 0.025, gform
 # SL.library -- prediction algorithms for data adaptive estimation of g
 # returns: the estimated ate, sd and 95% confidence interval
 
-IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, SL.library){
+IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, SL.library = NULL, gMeth = FALSE){
   Y <- ObsData$Y
   A <- ObsData$A
   W <- ObsData[, !names(ObsData) %in% c("Y", "A")]
+
+  if (gMeth){.check_gMeth(gGLM, gform, SL.library)} # if gMeth=TRUE, show the status message
 
   # estimate propensity score
   if(is.null(gform)){gform=paste("A~", paste(colnames(W), collapse = "+"))}
@@ -400,7 +431,9 @@ IPTW_ate <- function (ObsData, outcome_type, gGLM, gbound = 0.025, gform= NULL, 
 
 
 
+
 #----------------- main function to compute the bias of the estimates on IPTW,AIPTW,TMLE ------------------
+
 
 # input: outcome- Y(binary and/or continuous); binary treatment A; a set of potential confounders- W
 # outcome_type -- "continuous" or "binary"
@@ -420,6 +453,7 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
 
   # check all inputs
   .check_var2(Y, A, W, outcome_type, M, gbound, gGLM, gform, SL.library)
+  .check_gMeth(gGLM, gform, SL.library)
 
   # create the outcome regression formula
   if (is.null(Qform)){Qform <- paste ("Y~A+", paste(colnames(W), collapse = "+"))}
@@ -452,9 +486,9 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
     }
 
     # compute estimates of tmle, iptw, and aiptw of the bootstrap dataset
-    tmle_res <- TMLE_ate(bootdata, Qform = Qform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
-    iptw_res <- IPTW_ate(bootdata, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
-    aiptw_res <- AIPTW_ate(bootdata, Qform = Qform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library)
+    tmle_res <- TMLE_ate(bootdata, Qform = Qform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library, gMeth = FALSE)
+    iptw_res <- IPTW_ate(bootdata, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library, gMeth = FALSE)
+    aiptw_res <- AIPTW_ate(bootdata, Qform = Qform, outcome_type = outcome_type, gGLM, gbound = gbound, gform = gform, SL.library = SL.library, gMeth = FALSE)
 
     # compute the bias
     bias_TMLE[i] <- tmle_res$ATE-true_eff
@@ -465,23 +499,6 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
     cov_TMLE <- cov_TMLE + ifelse(true_eff >= tmle_res$CI[1] & true_eff <= tmle_res$CI[2], 1, 0 )
     cov_IPTW <- cov_IPTW + ifelse(true_eff >= iptw_res$CI[1] & true_eff <= iptw_res$CI[2], 1, 0 )
     cov_AIPTW <- cov_AIPTW + ifelse(true_eff >= aiptw_res$CI[1] & true_eff <= aiptw_res$CI[2], 1, 0 )
-  }
-  # print status message
-  if (gGLM){
-    if (!is.null(gform)){
-      if (!is.null(SL.library)) {# if user set gGLM is TRUE and define SL function simultaneously
-        cat("Estimating ate using user-supplied regression formula and ignoring supplied SuperLearner functions for g \n\n")}
-      else (cat("Estimating ate using user-supplied regression formula for g \n\n"))
-    }
-    else (cat("Estimating ate using default regression formula for g: A ~ W \n\n"))
-  }
-  else {
-    if (!is.null(SL.library)){
-      if (!is.null(gform)){
-        cat("Estimating ate using user-supplied SuperLearner functions and ignoring supplied regression formula for g \n\n")}
-      else {cat("Estimating ate using user-supplied SuperLearner functions for g \n\n")}
-    }
-    else (stop("Please specify SuperLearner library for g. \n\n"))
   }
 
   results <- list(true_Effect = true_eff, gbound =  gbound, bias_IPTW = bias_IPTW, bias_AIPTW = bias_AIPTW, bias_TMLE = bias_TMLE,
