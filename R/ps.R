@@ -49,7 +49,7 @@
 
 
 #-------------- helper function to check all input variables --------------------
-.check_var1 <- function(A, W, gform1, gform2, SL.library1, SL.library2, gbound){
+.check_var1 <- function(A, W, gform1, gform2, SL.library1, SL.library2, gbound, verbose){
   # check the dimension of W and A
   if(length(A)!= nrow(W) ){stop("The data dimensions do not correspond.")}
 
@@ -81,6 +81,9 @@
 
   if (is.null(gform1) & is.null(SL.library1) & is.null(gform2) & is.null(SL.library2))
     stop("Please specify the gforms and/or SL.librarys. ")
+
+  # check verbose
+  if (class(verbose)!="logical"){stop("verbose must be TRUE or FALSE")}
 }
 
 
@@ -92,7 +95,7 @@
 # if verbose is TRUE, it will show the fit summaries.
 
 ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE){
-  .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound)
+  .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound, verbose)
 
   # always have gform1 specified if gform2 is specified
   if (is.null(gform1) & !is.null(gform2)) {gform1 = gform2; gform2 = NULL}
