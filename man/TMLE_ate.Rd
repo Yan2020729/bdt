@@ -2,9 +2,9 @@
 \alias{TMLE_ate}
 \title{Estimated average treatment effect by targeted maximum likelihood estimation algorithm}
 
-\description{Using \code{tmle} function to estimate the additive effect where the outcome model is fitted by a "true" GLM and the propensity is modeled by SuperLearner (SL) and/or logistic regression. User could define the regression formula for propensity in GLM or the SL functions in SL. }
+\description{To estimate the additive effect where the outcome model is fitted by a "true" GLM and the propensity is modeled by SuperLearner (SL) and/or logistic regression. User could define the regression formula for propensity in GLM or the SL functions in SL. }
 
-\usage{TMLE_ate(ObsData, Qform = NULL, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library, gMeth = FALSE)}
+\usage{TMLE_ate(ObsData, Qform = NULL, outcome_type, gGLM, gbound = 0.025, gform = NULL, SL.library, gMeth = FALSE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE)}
 
 \arguments{
   \item{ObsData}{a given dataset containing continuous or binary outcome \code{Y}, binary treatment \code{A}, and a set of potential confounders \code{W} based on observing n i.i.d. observations on (W,A,Y). W may contain factors. Missing values are not allowed.}
@@ -15,6 +15,8 @@
   \item{SL.library}{vector of prediction algorithms for data adaptive estimation of g}
   \item{outcome_type}{"continuous" or "binary"}
   \item{gMeth}{if TRUE, print status message of the estimation method for g; default value is FALSE}
+   \item{remove_first_dummy}{for categorical covariates, if true remove the first dummy of each covariate such that only n-1 dummies remain. This avoids multicollinearity issues in models(default =\code{FALSE}) }
+  \item{remove_most_frequent_dummy}{for categorical covariates, if true remove the most frequently observed category such that only n-1 dummies remain. If there is a tie for most frequent, will remove the first (by alphabetical order) category that is tied for most frequent.(default =\code{FALSE}) }
 }
 
 \value{
