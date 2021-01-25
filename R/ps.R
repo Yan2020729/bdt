@@ -8,6 +8,29 @@
 .bound <- function(x, bounds){
   x[x<min(bounds)] <- min(bounds); x[x>max(bounds)] <- max(bounds)
   return(x)
+  # y <- x; q <- quantile(x, bounds)
+  # y[x < q[1]] <- q[1]; y[x > q[2]] <- q[2]
+  # return(y)
+}
+
+
+.convertCategorPS <- function(W, gform, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
+  if (any(lapply(W, is.factor) == TRUE)){
+    cat_names <- names(W)[lapply(W, is.factor) == TRUE]
+    # extract baseline variable names from gform
+    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
+    g_val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
+    g_val <- unlist(strsplit( g_val, split = " "))
+
+    W = fastDummies::dummy_cols(W, remove_first_dummy = remove_first_dummy,
+                                remove_most_frequent_dummy=remove_most_frequent_dummy)
+    W = W[, !names(W) %in% c(cat_names)]
+
+    gform_cat <- stringr::str_c(c(unlist(sapply(1:length(g_val), function(x)
+      names(W)[stringr::str_detect(names(W), g_val[x])]))), collapse = "+")
+    gform <- paste0("A~", gform_cat)
+  }
+  return(list(W=W, gform=gform))
 }
 
 
@@ -18,7 +41,10 @@
 #        ps.A1.pred-- p(A=1|W) for subgroups with A=1
 #        ps.A0.pred-- p(A=1|W) for subgroups with A=0
 
-.ps_GLM <- function(A, W, gform, gbound){
+.ps_GLM <- function(A, W, gform, gbound, remove_first_dummy, remove_most_frequent_dummy){
+
+  coverCate <- .convertCategorPS(W, gform, remove_first_dummy, remove_most_frequent_dummy)
+  W = coverCate$W; gform = coverCate$gform
 
   ps <- glm(gform, data = data.frame(A, W), family = "binomial")
   designM <- model.matrix(as.formula(gform), data.frame(A, W))
@@ -94,7 +120,8 @@
 # return: summary of p(A=1|W) for all subjects with GLM and SL and summary of fit coefficients
 # if verbose is TRUE, it will show the fit summaries.
 
-ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE){
+ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0,
+               verbose = FALSE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
   .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound, verbose)
 
   # always have gform1 specified if gform2 is specified
@@ -108,7 +135,9 @@ ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.librar
 
   # compute ps on case_vec
   ps_glm_list <- sapply(1:2, function(x)if (case_vec[x]==1) {
-    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$ps_glm
+    ps.GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound,
+                      remove_first_dummy = remove_first_dummy,
+                      remove_most_frequent_dummy = remove_most_frequent_dummy)$ps_glm
     n.GLM <- length(ps.GLM$ps.pred)
     ps1.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c(ps.GLM$ps.pred))
     ps0.GLM <- data.frame(as.factor(c(rep(paste0("GLM",x), n.GLM))),c((1-ps.GLM$ps.pred)))
@@ -177,7 +206,9 @@ ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.librar
 
   if (verbose == TRUE) {
     try(fit_glm_list <- sapply(1:2, function(x) if (case_vec[x]==1) {
-      fit_GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound)$fit_glm
+      fit_GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound,
+                         remove_first_dummy = remove_first_dummy,
+                         remove_most_frequent_dummy = remove_most_frequent_dummy)$fit_glm
       list(fit_GLM)}))
     try(fit_SL_list <- sapply(1:2, function(x) if (case_vec[x+2] ==1) {
       fit_SL <- .ps_SL(A = A, W = W, SL.library = eval(as.name(paste0("SL.library",x))), gbound)$fit_SL
