@@ -1,11 +1,11 @@
 \name{bdt}
 \alias{bdt}
 \title{Bootstrap Diagnostic Tool}
-\description{bdt is to compute the bias of three ate estimators: inverse probability treatment weighting (IPTW), augmented inverse probability treatment weighting (AIPTW) and targeted maximum likelihood estimator (TMLE) and their corresponding coverage rates. This function returns the propensity scores for all subjects and for subgroups with A=1 and A=0 as well. The \code{bdt} function is generally called with arguments \code{(Y,A,W)}, where \code{Y} is a continuous or binary outcome variable, \code{A} is a binary treatment variable, (\code{A=1} for treatment, \code{A=0} for control), and \code{W} is a matrix or dataframe of baseline covariates. It may contain factors. The number of replications is identified using the \code{M} argument.
+\description{bdt is to compute the bias of two ate estimators: augmented inverse probability treatment weighting (AIPTW) and targeted maximum likelihood estimator (TMLE) and their corresponding coverage rates. This function returns the propensity scores for all subjects and for subgroups with A=1 and A=0 as well. The \code{bdt} function is generally called with arguments \code{(Y,A,W)}, where \code{Y} is a continuous or binary outcome variable, \code{A} is a binary treatment variable, (\code{A=1} for treatment, \code{A=0} for control), and \code{W} is a matrix or dataframe of baseline covariates. It may contain factors. The number of replications is identified using the \code{M} argument.
 }
 
 \usage{bdt(Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL,
-gform = NULL, SL.library = NULL)}
+gform = NULL, SL.library = NULL, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE)}
 
 \arguments{
   \item{Y}{continuous or binary outcome variable}
@@ -18,16 +18,17 @@ gform = NULL, SL.library = NULL)}
   \item{gform}{optional regression formula of g; default value is "A~W"}
   \item{gbound}{value between (0,1) for truncation of predicted probabilities; default value is 0.025}
   \item{SL.library}{vector of prediction algorithms for data adaptive estimation of g}
+
+   \item{remove_first_dummy}{for categorical covariates, if true remove the first dummy of each covariate such that only n-1 dummies remain. This avoids multicollinearity issues in models(default =\code{FALSE}) }
+  \item{remove_most_frequent_dummy}{for categorical covariates, if true remove the most frequently observed category such that only n-1 dummies remain. If there is a tie for most frequent, will remove the first (by alphabetical order) category that is tied for most frequent.(default =\code{FALSE}) }
 }
 
 \value{
   \item{true_Effect}{the true ate for bootstrap datasets}
-  \item{bias_IPTW}{the IPTW bias ate of bootstrap data based on the true effect}
   \item{bias_AIPTW}{the AIPTW bias ate of bootstrap data based on the true effect}
-  \item{bias_TMLE}{the TMLE bias ate by calling \code{tmle} of bootstrap data based on the true effect }
-  \item{cov_IPTW}{the coverage rate over \code{M} replications, standard error is computed by calling \code{sandwich}}
+  \item{bias_TMLE}{the TMLE bias ate of bootstrap data based on the true effect }
   \item{cov_AIPTW}{the coverage rate over \code{M} replications, standard error is computed by influence function}
-  \item{cov_TMLE}{the coverage rate over \code{M} replications, standard error is computed by calling \code{tmle}}
+  \item{cov_TMLE}{the coverage rate over \code{M} replications, standard error is computed by influence function}
   \item{ps_GLM}{the propensity scores estimated by GLM for all subjects over \code{M} replications }
   \item{ps_SL}{the propensity scores estimated by calling \code{SuperLearner} for all subjects over \code{M} replications }
 }
@@ -39,8 +40,6 @@ gform = NULL, SL.library = NULL)}
 \seealso{
 
   \code{\link{TMLE_ate}}
-
-  \code{\link{IPTW_ate}}
 
   \code{\link{AIPTW_ate}}
 
@@ -69,14 +68,14 @@ gform = NULL, SL.library = NULL)}
 
   result1 <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE,
   Qform= "Y~A+W1+W2+I1+I2+P1",
-  gform = "A~W2+W1+I1+I2+P1", M = 100)
+  gform = "A~W2+W1+I1+I2+P1", M = 60)
   summary(result1)
 
 # User-supplied SuperLearner function to estimate g
 
   result2 <- bdt(Y, A, W, outcome_type ="continuous", gGLM = FALSE,
   Qform= "Y~A+W1+W2+I1+I2+P1",
-  SL.library = c("SL.gam", "SL.glm"), M = 100)
+  SL.library = c("SL.gam", "SL.glm"), M = 60)
   summary(result2)
 }
 
