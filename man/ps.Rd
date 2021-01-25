@@ -6,8 +6,7 @@
 Probabilities of being treated and not being treated for all subjects and for subgroups \code{A=1} and \code{A=0}. Estimates could be computing by using two choices of GLM and/or SuperLearner.
 }
 \usage{
-ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL,
-SL.library2 = NULL, gbound = 0, verbose = FALSE)}
+ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE)}
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
@@ -18,6 +17,8 @@ SL.library2 = NULL, gbound = 0, verbose = FALSE)}
   \item{SL.library2}{vector of prediction algorithms 2 for data adaptive estimation of g}
   \item{gbound}{bounds used to truncate g with value between (0,1) for truncation of predicted probabilities; default value is 0}
   \item{verbose}{status messages of the glm or SL summary printed if set to \code{TRUE} (default=\code{FALSE})}
+  \item{remove_first_dummy}{for categorical covariates, if true remove the first dummy of each covariate such that only n-1 dummies remain. This avoids multicollinearity issues in models(default =\code{FALSE}) }
+  \item{remove_most_frequent_dummy}{for categorical covariates, if true remove the most frequently observed category such that only n-1 dummies remain. If there is a tie for most frequent, will remove the first (by alphabetical order) category that is tied for most frequent.(default =\code{FALSE}) }
 }
 
 \value{
