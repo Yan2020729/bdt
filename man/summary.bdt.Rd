@@ -17,10 +17,8 @@
 \value{
   \item{true_Effect}{the true ate with respect to bootstrap datasets}
   \item{gbound}{the bounding for propensity scores used defined}
-  \item{bias.iptw}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of IPTW bias ate over \code{M} replications }
   \item{bias.aiptw}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of AIPTW bias ate over \code{M} replications }
   \item{bias.tmle}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of TMLE bias ate over \code{M} replications }
-  \item{cov.iptw}{the coverage rate over \code{M} replications}
   \item{cov.aiptw}{the coverage rate over \code{M} replications}
   \item{cov.tmle}{the coverage rate over \code{M} replications}
   \item{coverage}{summary of three coverage rates over \code{M} replications}
