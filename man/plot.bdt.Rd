@@ -22,7 +22,7 @@
 }
 
 \value{
-  \item{boxplot_bias_ATE}{the boxplots and points of bias of the three estimated ate and coverage rates where y-axis represents the bias of estimates, x-axis represents estimates: IPTW, AIPTW, TMLE and coverage rates are marked as red in corresponding boxes}
+  \item{boxplot_bias_ATE}{the boxplots and points of bias of the three estimated ate and coverage rates where y-axis represents the bias of estimates, x-axis represents estimates: AIPTW, TMLE and coverage rates are marked as red in corresponding boxes}
   \item{densityplot_ps}{the 2 x 2 density plots (A, B, C, D) of the log of the estimated weights where A refers to treatment \code{A=1} in subgroups with \code{A=1}, B refers to treatment \code{A=0} in subgroups with \code{A=0}, C refers to treatment \code{A=1} for all subjects and D refers to treatment \code{A=0} for all subjects }
 }
 \references{
