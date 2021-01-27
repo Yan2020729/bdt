@@ -15,13 +15,16 @@
 }
 
 \value{
-  \item{true_Effect}{the true ate with respect to bootstrap datasets}
+  \item{true_Effect}{the true ate of simulated bootstrap datasets}
   \item{gbound}{the bounding for propensity scores used defined}
   \item{bias.aiptw}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of AIPTW bias ate over \code{M} replications }
   \item{bias.tmle}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of TMLE bias ate over \code{M} replications }
-  \item{cov.aiptw}{the coverage rate over \code{M} replications}
-  \item{cov.tmle}{the coverage rate over \code{M} replications}
-  \item{coverage}{summary of three coverage rates over \code{M} replications}
+  \item{sd.aiptw}{the average standard error of AIPTW estimatorover \code{M} replications}
+  \item{sd.tmle}{the average standard error of TMLE over \code{M} replications}
+  \item{cov.aiptw}{the coverage rate of AIPTW estimator over \code{M} replications}
+  \item{cov.tmle}{the coverage rate of TMLE over \code{M} replications}
+  \item{coverage}{coverage rates of TMLE and AIPTW over \code{M} replications}
+  \item{sd}{influence function based standard errors of TMLE and AIPTW over \code{M} replications}
   \item{bias}{a data frame of summaries of three bias over \code{M} replications}
   \item{ps}{a data frame of summaries of pooled probabilities over \code{M} replications}
 }
