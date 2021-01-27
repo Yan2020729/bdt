@@ -11,7 +11,7 @@
 
 <meta name="author" content="Yan Liu" />
 
-<meta name="date" content="2021-01-25" />
+<meta name="date" content="2021-01-27" />
 
 <title>Introduction to bdt()</title>
 
@@ -374,7 +374,7 @@ summary {
 
 <h1 class="title toc-ignore">Introduction to bdt()</h1>
 <h4 class="author">Yan Liu</h4>
-<h4 class="date">2021-01-25</h4>
+<h4 class="date">2021-01-27</h4>
 
 </div>
 
@@ -401,7 +401,7 @@ summary {
 <li>Stage 3: Computing the “true” effect for the bootstrap data. It is obtained by computing the difference of the two potential outcomes for all subjects using the estimated coefficients from 2nd step.</li>
 <li>Stage 4: Simulation of the bootstrap datasets. Sample the <span class="math inline">\(n\)</span> subjects with replacement then replace their observed outcomes with new outcome values which are estimated based on the coefficients obtained in the 2nd step. Specifically, if the outcome <span class="math inline">\(Y\)</span> is continuous, the two potential outcomes <span class="math inline">\(Y^1\)</span> and <span class="math inline">\(Y^0\)</span> are generated from a <span class="math inline">\(\mathcal{N}(\mu_a, \sigma^2_a)\)</span> distribution with mean <span class="math inline">\(\mu_a=\hat{\beta}_{0,a}+W\hat{\beta}_{W,a}, a\in\{0,1\}\)</span>. Similarly, if <span class="math inline">\(Y\)</span> is binary, <span class="math inline">\(Y^1\)</span> and <span class="math inline">\(Y^0\)</span> are generated from a <span class="math inline">\(Binomial(n_a, p_a)\)</span> distribution where <span class="math inline">\(n_a\)</span> represents the number of subjects with <span class="math inline">\(A=a\)</span> in the resampled data and <span class="math inline">\(logit(p_a)=\hat{\beta}_{0,a}+W\hat{\beta}_{W,a}, a\in\{0,1\}\)</span>.</li>
 <li>Stage 5: Estimation of target parameters. For the resampled data with simulated outcomes, two estimators TMLE and A-IPTW are applied to estimate the targeted parameter using the``true’’ specification of the outcome model (same with the linear regression model in step 2) and the propensity score is modeled by logistic regression and/or SL. User could define specific bounds for the values of <span class="math inline">\(g_n\)</span> where the default value is 0.025.</li>
-<li>Stage 6: Repeat steps (4) and (5) <span class="math inline">\(M\)</span> times. Then errors could be calculated by comparing the mean of the estimators <span class="math inline">\(\hat{\psi}\)</span> across <span class="math inline">\(M\)</span> bootstrap samples with the ``true’’ value of the bootstrap data. Also, the coverage rates of two estimators are computed based on the <span class="math inline">\(95\%\)</span> confidence intervals <span class="math inline">\(M\)</span> bootstrap samples.</li>
+<li>Stage 6: Repeat steps (4) and (5) <span class="math inline">\(M\)</span> times. Then errors could be calculated by comparing the mean of the estimators <span class="math inline">\(\hat{\psi}\)</span> across <span class="math inline">\(M\)</span> bootstrap samples with the ``true’’ value of the bootstrap data. Also, the influence function based standard errors and the coverage rates of two estimators are computed based on the <span class="math inline">\(95\%\)</span> confidence intervals <span class="math inline">\(M\)</span> bootstrap samples.</li>
 </ul>
 </div>
 <div id="example" class="section level2">
@@ -543,11 +543,11 @@ bdt_glm = bdt(Y, A, X, M = 10, outcome_type = &quot;continuous&quot;,
 ## 
 ## True simulated data effect:  1.00321  
 ## 
-## Average bias and coverage rates of AIPTW and TMLE estimators:
+## Mean and median bias, standard errors and coverage rates of AIPTW and TMLE estimators:
 ## 
-##       MeanBias Med.Bias  Cov.
-## AIPTW -0.51188 -0.54317 0.7
-##  TMLE -0.02901 -0.04331 1.0
+##       MeanBias Med.Bias    SD   Cov.
+## AIPTW -0.51188 -0.54317 0.39655 0.7
+##  TMLE -0.02901 -0.04331 0.42293 1.0
 ## 
 ## 
 ## Summary of propensity scores truncated at gbound 0  
@@ -579,11 +579,11 @@ bdt_sl = bdt(Y, A, X, M = 10, outcome_type = &quot;continuous&quot;, Qform = qfo
 ## 
 ## True simulated data effect:  1.00321  
 ## 
-## Average bias and coverage rates of AIPTW and TMLE estimators:
+## Mean and median bias, standard errors and coverage rates of AIPTW and TMLE estimators:
 ## 
-##       MeanBias Med.Bias  Cov.
-## AIPTW 0.02501 0.02212 0.9
-##  TMLE 0.01922 0.05069 0.9
+##       MeanBias Med.Bias    SD   Cov.
+## AIPTW 0.02501 0.02212 0.20515 0.9
+##  TMLE 0.01922 0.05069 0.20434 0.9
 ## 
 ## 
 ## Summary of propensity scores truncated at gbound 0  
