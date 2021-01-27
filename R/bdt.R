@@ -464,6 +464,7 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
                 remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
 
   bias_TMLE <- NULL; bias_AIPTW <- NULL # bias_IPTW <- NULL
+  sd_TMLE <- NULL; sd_AIPTW <- NULL
   cov_TMLE <- cov_AIPTW <- 0 # cov_IPTW <- 0
   ps.all.GLM <- NULL; ps.all.SL <- NULL
 
@@ -521,6 +522,9 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
     # bias_IPTW[i] <- iptw_res$ATE-true_eff
     bias_AIPTW[i] <- aiptw_res$ATE-true_eff
 
+    sd_TMLE[i] <- tmle_res$SD
+    sd_AIPTW[i] <- aiptw_res$SD
+
     # compute the times that true value is within the intervals of three methods
     cov_TMLE <- cov_TMLE + ifelse(true_eff >= tmle_res$CI[1] & true_eff <= tmle_res$CI[2], 1, 0 )
     # cov_IPTW <- cov_IPTW + ifelse(true_eff >= iptw_res$CI[1] & true_eff <= iptw_res$CI[2], 1, 0 )
@@ -529,6 +533,7 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
 
   results <- list(true_Effect = true_eff, gbound =  gbound, #bias_IPTW = bias_IPTW,
                   bias_AIPTW = bias_AIPTW, bias_TMLE = bias_TMLE,#cov_IPTW = cov_IPTW/M,
+                  sd_AIPTW = sd_AIPTW, sd_TMLE = sd_TMLE,#cov_IPTW = cov_IPTW/M,
                   cov_AIPTW = cov_AIPTW/M, cov_TMLE = cov_TMLE/M,
                   ps_GLM = ps.all.GLM, ps_SL = ps.all.SL)
   class(results) <- "bdt"
@@ -588,6 +593,8 @@ summary.bdt <- function(object,...){
     # coverage <- paste0("Coverage rate of IPTW: ", round(object$cov_IPTW,4),
     #                   ";  Coverage rate of AIPTW: ",round(object$cov_AIPTW,4),
     #                   ";  Coverage rate of TMLE: ",round(object$cov_TMLE,4))
+    sd <- paste0("Standard error of AIPTW: ",round(mean(object$sd_AIPTW),4),
+                 ";  standard error of TMLE: ",round(mean(object$sd_TMLE),4))
     coverage <- paste0("Coverage rate of AIPTW: ",round(object$cov_AIPTW,4),
                        ";  Coverage rate of TMLE: ",round(object$cov_TMLE,4))
     ps <- data.frame(rbind(ps1.sum, ps0.sum, ps11.sum, ps00.sum))
@@ -598,8 +605,9 @@ summary.bdt <- function(object,...){
                       #bias.iptw = summary(object$bias_IPTW),
                       bias.aiptw = summary(object$bias_AIPTW), bias.tmle = summary(object$bias_TMLE),
                       #cov.iptw = round(object$cov_IPTW,4),
+                      sd.aiptw = mean(object$sd_AIPTW), sd.tmle = mean(object$sd_TMLE),
                       cov.aiptw = round(object$cov_AIPTW,4), cov.tmle = round(object$cov_TMLE,4),
-                      bias = bias,  coverage = coverage, ps = ps)
+                      bias = bias,  coverage = coverage, sd = sd, ps = ps)
 
     class(summary.bdt) <- "summary.bdt"
   } else {
@@ -620,14 +628,15 @@ print.summary.bdt <- function(x,...){
     cat("\n\nTrue simulated data effect: ", specify_decimal(x$true.effect, 5), " \n")
 
     # cat("\nAverage bias and coverage rates of IPTW, AIPTW and TMLE estimators:\n\n")
-    cat("\nAverage bias and coverage rates of AIPTW and TMLE estimators:\n\n")
+    cat("\nMean and median bias, standard errors and coverage rates of AIPTW and TMLE estimators:\n\n")
     #i <- specify_decimal(x$bias.iptw[4], 5);
     a <- specify_decimal(x$bias.aiptw[4], 5); t <- specify_decimal(x$bias.tmle[4], 5)
     #s <- specify_decimal(x$bias.iptw[3], 5);
     u <- specify_decimal(x$bias.aiptw[3], 5); v <- specify_decimal(x$bias.tmle[3], 5)
+    m <- specify_decimal(x$sd.aiptw, 5); n <- specify_decimal(x$sd.tmle, 5)
     # res_data <- data.frame(c(" IPTW","AIPTW"," TMLE"), c(i, a, t), c(s, u, v), c(x$cov.iptw, x$cov.aiptw, x$cov.tmle))
-    res_data <- data.frame(c("AIPTW"," TMLE"), c(a, t), c(u, v), c(x$cov.aiptw, x$cov.tmle))
-    names(res_data) <- c("     ","MeanBias",  "Med.Bias", " Cov.")
+    res_data <- data.frame(c("AIPTW"," TMLE"), c(a, t), c(u, v), c(m, n), c(x$cov.aiptw, x$cov.tmle))
+    names(res_data) <- c("     ","MeanBias",  "Med.Bias", "   SD ", " Cov.")
     gdata::write.fwf(res_data)
 
     cat("\n\nSummary of propensity scores truncated at gbound", x$gbound, " \n\n")
