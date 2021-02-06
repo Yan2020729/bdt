@@ -3,38 +3,6 @@
 ############################################################################################################
 #------------------------------------------------ Stage 2 --------------------------------------------------
 ############################################################################################################
-.convertCategor <- function(W, gform, Qform = NULL, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
-  if (any(lapply(W, is.factor) == TRUE)){
-
-    cat_names <- names(W)[lapply(W, is.factor) == TRUE]
-    W_dums = fastDummies::dummy_cols(W, remove_first_dummy = remove_first_dummy,
-                                     remove_most_frequent_dummy=remove_most_frequent_dummy)
-    W_dum = W_dums[, !names(W_dums) %in% c(cat_names)]
-
-    # extract baseline variable names from gform
-    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
-    g_val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
-    g_val <- unlist(strsplit( g_val, split = " "))
-
-    gform_cat <- stringr::str_c(c(unlist(sapply(1:length(g_val), function(x)
-      names(W_dum)[stringr::str_detect(names(W_dum), g_val[x])]))), collapse = "+")
-    gform <- paste0("A~", gform_cat)
-
-    if (!is.null(Qform)){
-      noSpace.Qform <- stringr::str_replace_all(string=Qform, pattern=" ", repl="")
-      Q_val <- chartr(old = "+", new = " ", substring(noSpace.Qform, 5))
-      Q_val <- unlist(strsplit( Q_val, split = " "))
-
-      Qform_cat <- stringr::str_c(c(unlist(sapply(1:length(Q_val), function(x)
-        names(W_dum)[stringr::str_detect(names(W_dum), Q_val[x])]))), collapse = "+")
-      Qform <- paste0("Y~A+", Qform_cat)
-    }
-    return(list(W=W_dum, gform=gform, Qform=Qform))
-  } else {
-    return(list(W=W, gform=gform, Qform=Qform))
-  }
-}
-
 
 
 #---------------------- function to fit glm on Y in the observed data -------------------------
@@ -174,8 +142,43 @@
   return(weigh)
 }
 
+# this function is to covert categorical variables to corresponding dichotomous variables.
+# depend on the data, there are two choices: remove first dummy or remove most frequent dummy
+.convertCategor <- function(W, gform, Qform = NULL, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
+  if (any(lapply(W, is.factor) == TRUE)){
+
+    cat_names <- names(W)[lapply(W, is.factor) == TRUE]
+    W_dums = fastDummies::dummy_cols(W, remove_first_dummy = remove_first_dummy,
+                                     remove_most_frequent_dummy=remove_most_frequent_dummy)
+    W_dum = W_dums[, !names(W_dums) %in% c(cat_names)]
+
+    # extract baseline variable names from gform
+    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
+    g_val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
+    g_val <- unlist(strsplit( g_val, split = " "))
+
+    gform_cat <- stringr::str_c(c(unlist(sapply(1:length(g_val), function(x)
+      names(W_dum)[stringr::str_detect(names(W_dum), g_val[x])]))), collapse = "+")
+    gform <- paste0("A~", gform_cat)
+
+    if (!is.null(Qform)){
+      noSpace.Qform <- stringr::str_replace_all(string=Qform, pattern=" ", repl="")
+      Q_val <- chartr(old = "+", new = " ", substring(noSpace.Qform, 5))
+      Q_val <- unlist(strsplit( Q_val, split = " "))
+
+      Qform_cat <- stringr::str_c(c(unlist(sapply(1:length(Q_val), function(x)
+        names(W_dum)[stringr::str_detect(names(W_dum), Q_val[x])]))), collapse = "+")
+      Qform <- paste0("Y~A+", Qform_cat)
+    }
+    return(list(W=W_dum, gform=gform, Qform=Qform))
+  } else {
+    return(list(W=W, gform=gform, Qform=Qform))
+  }
+}
 
 
+
+# output the message of method used based on the input of gform and SL.library
 .check_gMeth <- function(gGLM, gform, SL.library){
   if (gGLM){
     if (!is.null(gform)){
@@ -200,7 +203,7 @@
 }
 
 
-
+# this function is to produce the estimates of ps by glm (gform) or SL depending on value of gGLM
 .weight_glm_sl <- function(Y, A, W, gform, gbound, gGLM, SL.library){
   if (gGLM){
     # w <- .weight.glm(data.frame(Y, A, W), gform, gbound)
@@ -211,10 +214,7 @@
     ps.obs <- ifelse(ObsData$A == 0, 1- ps.pred, ps.pred)
   } else {
   # library(SuperLearner)
-    noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
-    val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
-    val <- unlist(strsplit( val, split = " "))
-    ps.SL <- suppressWarnings(SuperLearner(Y = A, X = W[,val], family = binomial(),SL.library = SL.library)$SL.predict)
+    ps.SL <- SuperLearner(Y = A, X = W, family = binomial(),SL.library = SL.library)$SL.predict
     ps.obs <- ifelse(data.frame(Y, A, W)$A == 0, 1- ps.SL, ps.SL)
   }
   w <- .weight(ps.obs, gbound)# use the weight function
@@ -257,16 +257,18 @@ TMLE_ate <- function (ObsData, Qform=NULL, outcome_type, gGLM, gbound = 0.025, g
     Ybound <- 0.001 # make value of ystar bounded away from 0 and 1
     Y = .bound(Y.t, c(Ybound, 1-Ybound))
   }
-  reg <- glm(Qform, data = data.frame(Y, A, W), family = "binomial")
+  reg <- suppressWarnings(glm(Qform, data = data.frame(Y, A, W), family = "binomial"))
 
-  QAm <- predict(reg, newdata=data.frame(A, W), type="response")
-  Q1m <- predict(reg, newdata = data.frame(A=1, W), type="response")
-  Q0m <- predict(reg, newdata = data.frame(A=0, W), type="response")
+  designM1 <- model.matrix (as.formula(Qform), data.frame(A=1, W))
+  designM0 <- model.matrix (as.formula(Qform), data.frame(A=0, W))
+  Q1m <- plogis(designM1[, !is.na(coef(reg))] %*% reg$coeff[!is.na(coef(reg))])
+  Q0m <- plogis(designM0[, !is.na(coef(reg))] %*% reg$coeff[!is.na(coef(reg))])
 
   # TMLE algorithm
-  update <- suppressWarnings(glm(Y~-1+w, offset = qlogis(QAm), family="binomial"))
-  Q1m_updated <- plogis(qlogis(Q1m) + as.numeric(coef(update))*w)
-  Q0m_updated <- plogis(qlogis(Q0m) + as.numeric(coef(update))*w)
+  update1 <- suppressWarnings(glm(Y~-1+w, subset=(A==1), offset = qlogis(Q1m), family="binomial", data = data.frame(Y, A, W)))
+  update0 <- suppressWarnings(glm(Y~-1+w, subset=(A==0), offset = qlogis(Q0m), family="binomial", data = data.frame(Y, A, W)))
+  Q1m_updated <- plogis(qlogis(Q1m) + as.numeric(coef(update1))*w)
+  Q0m_updated <- plogis(qlogis(Q0m) + as.numeric(coef(update0))*w)
 
   if (identical(outcome_type,"continuous")){
     res_ate <- mean((Q1m_updated - Q0m_updated)*diff(ab), na.rm = TRUE)
@@ -283,8 +285,6 @@ TMLE_ate <- function (ObsData, Qform=NULL, outcome_type, gGLM, gbound = 0.025, g
   eff_tmle <- list(ATE = res_ate, SD = sd, CI = ci)
   return(eff_tmle)# return list type values: ate and ci
 }
-
-
 
 
 
@@ -342,7 +342,6 @@ AIPTW_ate <- function (ObsData, Qform = NULL, outcome_type, gGLM, gbound = 0.025
   eff_aiptw <- list(ATE = res_ate, SD = sd, CI = ci)
   return(eff_aiptw)# return list type values: ate and ci
 }
-
 
 
 
@@ -446,7 +445,6 @@ AIPTW_ate <- function (ObsData, Qform = NULL, outcome_type, gGLM, gbound = 0.025
 
 
 
-
 #----------------- main function to compute the bias of the estimates on IPTW,AIPTW,TMLE ------------------
 
 
@@ -539,7 +537,6 @@ bdt <- function (Y, A, W, outcome_type, M, gbound = 0.025, gGLM, Qform = NULL, g
   class(results) <- "bdt"
   return(results)
 }
-
 
 
 
@@ -678,7 +675,7 @@ plot.bdt <- function(x, xlab = NULL, ylab = "Bias", outlierSize= 0.4, notch = FA
     type = c("AIPTW", "TMLE")
     high = min(est_data$Bias_ATE)-0.03
     # coverage = round(c(x$cov_IPTW, x$cov_AIPTW, x$cov_TMLE), 2)
-    coverage = round(c(x$cov_AIPTW, x$cov_TMLE), 2)
+    coverage = round(c(x$cov_AIPTW, x$cov_TMLE), 3)
     anno.data <- data.frame(type, high, coverage)
     # library(ggplot2)
     est_plot <- ggplot(est_data, aes(x = as.factor(type_est), y = Bias_ATE))+
@@ -742,8 +739,4 @@ plot.bdt <- function(x, xlab = NULL, ylab = "Bias", outlierSize= 0.4, notch = FA
   par(ask=TRUE)
   return(fig_box_density)
 }
-
-
-
-
 
