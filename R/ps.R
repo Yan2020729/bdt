@@ -19,8 +19,8 @@
     cat_names <- names(W)[lapply(W, is.factor) == TRUE]
     # extract baseline variable names from gform
     noSpace.gform <- stringr::str_replace_all(string=gform, pattern=" ", repl="")
-    g_val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))
-    g_val <- unlist(strsplit( g_val, split = " "))
+    g_val <- chartr(old = "+", new = " ", substring(noSpace.gform, 3))# get a string of variables in gform
+    g_val <- unlist(strsplit( g_val, split = " "))# split the string
 
     W = fastDummies::dummy_cols(W, remove_first_dummy = remove_first_dummy,
                                 remove_most_frequent_dummy=remove_most_frequent_dummy)
@@ -204,7 +204,7 @@ ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.librar
   # produce datas on index number
   ps_data <- sapply(1:4, function(x) list(eval(parse(text = data_name[[index]][[x]]))))
 
-  if (verbose == TRUE) {
+  if (verbose == TRUE) { # if verbose is TRUE, return the fit summaries
     try(fit_glm_list <- sapply(1:2, function(x) if (case_vec[x]==1) {
       fit_GLM <- .ps_GLM(A = A, W = W, gform = eval(as.name(paste0("gform",x))), gbound,
                          remove_first_dummy = remove_first_dummy,
