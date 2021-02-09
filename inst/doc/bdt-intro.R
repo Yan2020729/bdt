@@ -29,9 +29,9 @@ Y = 1 + A + X[,"W1"] + 2*X[,"W2"] + 0.5*(X[,"W1"] + X[,"P"])^2 + rnorm(n)
 
 ps = ps(A, X, gform1 = "A~ W1+W2+I1+I2", gform2 = "A~ W1*I1+W2*I2",
         SL.library1 = NULL,
-        SL.library2 = c("SL.glm", "SL.glmnet", "SL.gam", "SL.glm.interaction"),
-        verbose = TRUE)
+        SL.library2 = c("SL.glm", "SL.glmnet", "SL.gam", "SL.glm.interaction"))
 summary(ps)
+summary(ps)$SL
 plot(ps)
 ps$fit_summaries
 
