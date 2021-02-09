@@ -6,7 +6,7 @@
 Probabilities of being treated and not being treated for all subjects and for subgroups \code{A=1} and \code{A=0}. Estimates could be computing by using two choices of GLM and/or SuperLearner.
 }
 \usage{
-ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = FALSE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE)}
+ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0, verbose = TRUE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE)}
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{A}{binary treatment indicator, \code{1} - treatment, \code{0} - control}
@@ -16,7 +16,7 @@ ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, g
   \item{SL.library1}{vector of prediction algorithms 1 for data adaptive estimation of g}
   \item{SL.library2}{vector of prediction algorithms 2 for data adaptive estimation of g}
   \item{gbound}{bounds used to truncate g with value between (0,1) for truncation of predicted probabilities; default value is 0}
-  \item{verbose}{status messages of the glm or SL summary printed if set to \code{TRUE} (default=\code{FALSE})}
+  \item{verbose}{print the fit summary of GLM or SL if it is TRUE (default=\code{TRUE})}
   \item{remove_first_dummy}{for categorical covariates, if true remove the first dummy of each covariate such that only n-1 dummies remain. This avoids multicollinearity issues in models(default =\code{FALSE}) }
   \item{remove_most_frequent_dummy}{for categorical covariates, if true remove the most frequently observed category such that only n-1 dummies remain. If there is a tie for most frequent, will remove the first (by alphabetical order) category that is tied for most frequent.(default =\code{FALSE}) }
 }
@@ -43,7 +43,7 @@ ps(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, g
   A <- rbinom(n, 1, plogis(0.2+ W[,"W1"]+0.3*W[,"I1"]+W[,"W1"]*W[,"I1"]-0.2*(W[,"W2"]+W[,"I2"])^2))
 
   ps1 <- ps(A,W,gform1 = "A~W2+W1+I1+I2",gform2 = "A~W1+I1+I2+W1*W2",
-  SL.library1 ="SL.glmnet",gbound=0,verbose = FALSE)
+  SL.library1 ="SL.glmnet",gbound=0)
 
 # or
 
