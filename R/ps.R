@@ -121,7 +121,7 @@
 # if verbose is TRUE, it will show the fit summaries.
 
 ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.library2 = NULL, gbound = 0,
-               verbose = FALSE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
+               verbose = TRUE, remove_first_dummy = FALSE, remove_most_frequent_dummy = FALSE){
   .check_var1(A, W, gform1, gform2, SL.library1, SL.library2, gbound, verbose)
 
   # always have gform1 specified if gform2 is specified
@@ -234,22 +234,48 @@ ps <- function(A, W, gform1 = NULL, gform2 = NULL, SL.library1 = NULL, SL.librar
 }
 
 
+#------------------------summary of ps ------------------------
 
 summary.ps <- function(object,...){
   if(identical(class(object), "ps")){
     rowName <- c("P(A=1|W) for all subjects by ", "P(A=0|W) for all subjects by ", "P(A=1|W) in subgroups A=1 by ", "P(A=0|W) in subgroups A=0 by ")
     colName <- c("Min.", "1st Qu.","Median", "Mean", "3rd Qu.", "Max.")
     methods <- unique(object$probabilities[[1]]$Method)
-    summ_list <- NULL
+    ALL_methods = summ_list = GLM1 = GLM2 = SL1 = SL2 = GLM = SL = NULL
     for (i in 1:length(methods)){
       summ <- t(data.frame(sapply(1:4, function(x)summary(object$probabilities[[x]][which(object$probabilities[[x]]$Method == methods[[i]]), ]$Propensity))))
       dimnames(summ) <- list(c(paste0(rowName,as.character(methods[[i]]))),colName)
+      assign(as.character(methods[[i]]), summ)
       summ_list <- rbind(summ_list, summ)
     }
+    if (!is.null(GLM1)&!is.null(GLM2)&!is.null(SL1)&!is.null(SL2)) {
+      summary.ps = list(ALL_methods = summ_list, GLM1 = GLM1, GLM2 = GLM2, SL1 = SL1, SL2 = SL2)
+    } else if (!is.null(GLM1)&!is.null(GLM2)&!is.null(SL)) {
+      summary.ps = list(ALL_methods = summ_list, GLM1 = GLM1, GLM2 = GLM2, SL= SL, SL1 = SL, SL2 = SL)
+    } else if (!is.null(GLM1)&!is.null(GLM2)&is.null(SL)){
+      summary.ps = list(ALL_methods = summ_list, GLM1 = GLM1, GLM2 = GLM2)
+    } else if (!is.null(GLM)&!is.null(SL1)&!is.null(SL2)) {
+      summary.ps = list(ALL_methods = summ_list, GLM = GLM, GLM1 = GLM, GLM2 = GLM, SL1= SL1, SL2 = SL2)
+    } else if(is.null(GLM) &!is.null(SL1)&!is.null(SL2)) {
+      summary.ps = list(ALL_methods = summ_list, SL1= SL1, SL2 = SL2)
+    } else if (!is.null(GLM) & !is.null(SL)){
+      summary.ps = list(ALL_methods = summ_list, GLM = GLM, GLM1 = GLM, GLM2 = GLM, SL = SL, SL1= SL, SL2 = SL)
+    } else if (!is.null(GLM) & is.null(SL)){
+      summary.ps = list(ALL_methods = summ_list, GLM = GLM, GLM1 = GLM, GLM2 = GLM)
+    } else {summary.ps = list(ALL_methods = summ_list, SL = SL, SL1= SL, SL2 = SL)}
+    class(summary.ps) <- "summary.ps"
   } else {
     stop("Object must have class 'ps'")
-    summ_list <- NULL}
-  return(summ_list)
+    summary.ps <- NULL}
+    return(summary.ps)
+}
+
+
+print.summary.ps <- function(x,...){
+  if(identical(class(x), "summary.ps")){
+    cat("\nSummary of estimated probabilities for given method(s):  \n\n")
+    print(x$ALL_methods)
+  }
 }
 
 
