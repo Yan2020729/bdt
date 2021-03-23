@@ -13,7 +13,7 @@
   \item{object}{an object of class \code{bdt} for \code{bias} functions.}
 }
 
-\value{\item{bias.ate}{a dataframe of ATE bias with three columns: bias of AIPTW and bias of TMLE}}
+\value{\item{bias.ate}{a dataframe of ATE bias with two columns: bias of AIPTW and bias of TMLE}}
 
 \references{
 1. Bahamyirou A, Blais L, Forget A, Schnitzer ME. (2019), {Understanding and diagnosing the potential for bias when using machine learning methods with doubly robust causal estimators}. \emph{Statistical methods in medical research} 28(6):1637-50.
