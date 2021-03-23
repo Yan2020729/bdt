@@ -37,16 +37,16 @@ ps$fit_summaries
 
 #--------------------------
 
-qform = "Y~A+W1+W2+P"
+m = 10
+seeds = sample(1:10000, m+1, rep = FALSE)
 gform = "A~W1+W2+I1+I2"
-bdt_glm = bdt(Y, A, X, M = 10, outcome_type = "continuous",
-              Qform = qform, gbound = 0, gGLM = TRUE, gform = gform)
+bdt_glm = bdt(Y, A, W=X, M = m, outcome_type = "continuous",
+              seed = seeds, gbound = 0, gGLM = TRUE, gform = gform)
 summary(bdt_glm)
 plot(bdt_glm)
 
 lib = c("SL.gam", "SL.glm.interaction")
-bdt_sl = bdt(Y, A, X, M = 10, outcome_type = "continuous", Qform = qform,
-             gbound = 0, gGLM = FALSE, SL.library = lib)
+bdt_sl = bdt(Y, A, W=X, M = m, outcome_type = "continuous",
+             seed = seeds, gbound = 0, gGLM = FALSE, SL.library = lib)
 summary(bdt_sl)
 plot(bdt_sl)
-
