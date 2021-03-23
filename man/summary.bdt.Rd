@@ -17,6 +17,7 @@
 \value{
   \item{true_Effect}{the true ate of simulated bootstrap datasets}
   \item{gbound}{the bounding for propensity scores used defined}
+  \item{gGLM}{'GLM' or 'SL' method user defined to estimate ps}
   \item{bias.aiptw}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of AIPTW bias ate over \code{M} replications }
   \item{bias.tmle}{the Min., 1st Qu., Median, Mean, 3rd Qu., Max value of TMLE bias ate over \code{M} replications }
   \item{sd.aiptw}{the average standard error of AIPTW estimatorover \code{M} replications}
@@ -51,7 +52,7 @@
   - 0.2*(W[,"W2"] + W[,"I2"])^2 ))
   Y <-  1 + A + W[,"W1"] + 2*W[,"W2"] + 0.5*(W[,"W1"] + W[,"P1"])^2 + rnorm(n)
 
-  result <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE, gform = "A~W2+W1+I1", M = 100)
+  result <- bdt(Y, A, W, outcome_type = "continuous", gGLM = TRUE, gform = "A~W2+W1+I1", M = 60)
   summary(result)
 }
 
