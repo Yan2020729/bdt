@@ -24,21 +24,30 @@ In the context of causal inference, identifiability of average treatment effects
 
 In this package, we use two estimators: augmented inverse probability of treatment weighted estimator (A-IPTW) and Targeted Maximum Likelihood Estimators (TMLEs) to estimate the average treatment effect (ATE). Doubly robust estimators A-IPTW and TMLE decrease the dependence on the correct specification of the propensity model and only require either outcome model or propensity score model to be correctly specified. 
 
-In practice, researchers are typically unaware of the true specification of the propensity score model. To increase the chance of correct model specification, flexible prediction methods, in particular the ensemble learner called 'SuperLearner' (SL), are often recommended. SL is a non-parametric methodology that uses cross validation to find an optimal convex combination of the predictions of a library of candidate algorithms defined by the user. However, under some settings the flexibility in the propensity modeling can lead to the selection of strong predictors of the treatment. This would give rise to extreme value of propensity score since these predictors may or may not be real confounders. Since both A-IPTW and TMLE involve the inverse of propensity scores, the practical positivity violations can lead to unstable parameter estimates and potential bias due to highly variable weights. Overall, in the presence of potential positivity violations, flexible modeling of the propensity score give rise to the increment of the bias and variance of the causal effect estimators as compared to parametric methods and the extent of how much they are impacted depends on the estimator. In order to address this issue, one may define different bounds to truncate the probabilities then reduce their standard errors though choice of truncation level is usually ad-hoc.
+In practice, researchers are typically unaware of the true specification of the propensity score model. To increase the chance of correct model specification, flexible prediction methods, in particular the ensemble learner called 'SuperLearner' (SL), are often recommended. SL is a non-parametric methodology that uses cross validation to find an optimal convex combination of the predictions of a library of candidate algorithms defined by the user. However, under some settings the flexibility in the propensity modeling can lead to the selection of strong predictors of the treatment. This would give rise to extreme value of propensity score since these predictors may or may not be real confounders. Both A-IPTW and TMLE estimators involve the inverse of propensity scores. Thus, the highly variable weights can lead to unstable parameter estimates and potential bias. Overall, in the presence of potential positivity violations, flexible modeling of the propensity score give rise to the increment of the bias and variance of the causal effect estimators as compared to parametric methods and the extent of how much they are impacted depends on the estimator. In order to address this issue, one may define different bounds to truncate the probabilities then reduce their standard errors though choice of truncation level is usually ad-hoc.
 
 ## Bootstrap diagnostic tool
 
-Bahamyirou et al. presented an adapted version of the diagnostic tool in simulation to illustrate whether the ATE estimators were destablized by the use of SL to fit the propensity score. For a given observed data set, the diagnostic tool which is based on a bootstrap resampling of the subjects, keeps the observed treatment of each resampled subject but simulates the outcome using the information of the two observed subgroups who are treated or not being treated. To expedite the application of this diagnostic tool, we develop **bdt** package to diagnose the instability introduced when machine learning is employed for the estimation of the propensity score. 
+Bahamyirou et al. presented an adapted version of the diagnostic tool in simulation to illustrate whether the ATE estimators were destablized by the use of SL to fit the propensity score. For a given observed data set, the diagnostic tool which is based on a bootstrap resampling of the subjects, keeps the observed treatment of each resampled subject but simulates the outcome using the information of the two observed subgroups who are treated or not being treated. To expedite the application of this diagnostic tool, we develop **bdt** package to diagnose the instability introduced when flexible modeling method is employed for the estimation of the propensity score. Based on the parametric bootstrap the **bdt** package can provide an optimistic bias estimate by excluding bias due to the model mis-sepcification for the outcome models. Because the outcome model is known and correct in terms of bootstrap data, we can expect that any large estimation errors are caused by the instability of the weights.
+
+Define $Q_{1, W}$ and $Q_{0, W}$ be the conditional expectation of the outcome for subjects who had been treated and not been treated respectively. Our target parameter is  $\psi=E(Q_{1,W}-Q_{0, W})$. If we estimate the quantities $Q_{1, n}$ and $Q_{0, n}$, we can obtain a plug-in estimator $\hat{\psi}=\frac{1}{n}\sum_{i=1}^n(Q_{1, n}-Q_{0, n})$ which is set as the "true" effect in the following algorithm. Define $g_n$ be the estimated conditional probabilities of the treatment mechanism. Specifically, we present the BDT algorithm with a continuous outcome as follows. Similar implementations can be easily produced for a binary outcome.
 
 
-## Stages 
+## Steps
 
-- Stage 1: Propensity scores estimation. For a given observed data $(W, A, Y)$ with $n$ i.i.d. observations where the outcome $Y$ is either a continuous or a binary variable, the treatment $A$ is a binary variable and $W$ could be a vector, matrix or data frame containing baseline covariates, the propensity scores are estimated by logistic regression and/or SL methods. 
-- Stage 2: Fitting outcome models. For the two treatment subgroups of subjects with $A=1$ and $A=0$, fit a linear regression of the outcome $Y$ on baseline covariates $W$ respectively where the model only contains main terms of $W$. We denote the estimated coefficients and their corresponding variance as $\hat{\beta}_{0,a}$, $\hat{\beta}_{W,a}$ and $\hat{\sigma}^2_a$ for the realization of treatment $a\in\{0,1\}$.
-- Stage 3: Computing the "true" effect for the bootstrap data. It is obtained by computing the difference of the two potential outcomes for all subjects using the estimated coefficients from 2nd step.
-- Stage 4: Simulation of the bootstrap datasets. Sample the $n$ subjects with replacement then replace their observed outcomes with new outcome values which are estimated based on the coefficients obtained in the 2nd step. Specifically, if the outcome $Y$ is continuous,  the two potential outcomes $Y^1$ and $Y^0$ are generated from a $\mathcal{N}(\mu_a, \sigma^2_a)$ distribution with mean $\mu_a=\hat{\beta}_{0,a}+W\hat{\beta}_{W,a}, a\in\{0,1\}$. Similarly, if $Y$ is binary, $Y^1$ and $Y^0$ are generated from a $Binomial(n_a, p_a)$ distribution where $n_a$ represents the number of subjects with $A=a$ in the resampled data and $logit(p_a)=\hat{\beta}_{0,a}+W\hat{\beta}_{W,a}, a\in\{0,1\}$. 
-- Stage 5: Estimation of target parameters. For the resampled data with simulated outcomes, two estimators TMLE and A-IPTW are applied to estimate the targeted parameter using the``true'' specification of the outcome model (same with the linear regression model in step 2) and the propensity score is modeled by logistic regression and/or SL. User could define specific bounds for the values of $g_n$ where the default value is 0.025. 
-- Stage 6: Repeat steps (4) and (5) $M$ times. Then errors could be calculated by comparing the mean of the estimators $\hat{\psi}$ across $M$ bootstrap samples with the ``true'' value of the bootstrap data. Also, the influence function based standard errors and the coverage rates of two estimators are computed based on the $95\%$ confidence intervals $M$ bootstrap samples.
+- Step 1: Estimate $Q_{1,n}$, $Q_{0,n}$ and simulate $Y^*$. For the two treatment subgroups of subjects with $A=1$ and $A=0$, fit a linear regression of the outcome $Y$ on baseline covariates $W$ respectively where the model only contains main terms of $W$ to predict $Q_{1,n}$ and $Q_{0,n}$ for all subjects and the variance $\hat{\sigma}^2_1$, $\hat{\sigma}^2_0$. New outcome $Y^*$ is simulated on assumed normal distribution with mean $Q_{1,n}$ and variance $\hat{\sigma}^2_1$ for subjects who had been treated, otherwise using mean $Q_{0,n}$ and variance $\hat{\sigma}^2_0$. Transform the three quantities  $Q_{1,n}$, $Q_{0,n}$ and $Y^*$ to lie between $[0,1]$. Construct a new data with structure $(W, A, Q_{1,n}, Q_{0,n}, Y^*)$. 
+
+- Step 2: Fit logistic regressions on the treatments to estimate propensity scores. The estimated coefficients are denoted as $\hat{\gamma}$.
+
+- Step 3: Sample $n$ subjects with replacement to generate a bootstrap dataset.
+
+- Step 4: Compute the mean of the difference $Q_{1,n}-Q_{0,n}$ and transform it to the original linear scale. Then we obtain the "true" effect with respect to the bootstrap dataset. 
+
+- Step 5: Using the coefficients $\hat{\gamma}$ in Stage 2 to estimate the $g_n^{glm}$ for the bootstrap data if user require GLM to estimate ps. Otherwise, use SL methods to estimate $g_n^{sl}$. Then compute the corresponding bounded weights $w$. Construct an augmented bootstrap data with structure $(W, A, Q_{1,n}, Q_{0,n}, Y^*, w)$. 
+
+- Step 6: Estimation of target parameters. For the resampled data with simulated outcomes, two estimators TMLE and A-IPTW are applied to estimate the targeted parameter using existed quantities. Compute the error for both approaches. In addition, based on the estimated influence functions to estimate the standard errors and $95\%$ confidence intervals.
+
+- Step 7: Repeat Steps 3 to 6 $M$ times. Then compute the average errors and the coverage rates on $M$ bootstrap samples.
 
 
 ## Example
@@ -65,32 +74,33 @@ A = rbinom(n, 1, plogis(0.2 + X[,"W1"] + 0.3*X[,"I1"] + X[,"W1"]*X[,"I1"]
 Y = 1 + A + X[,"W1"] + 2*X[,"W2"] + 0.5*(X[,"W1"] + X[,"P"])^2 + rnorm(n)
 ```
 
-We start with the estimation of propensity scores. We define two GLM regression formulas and one vector of SL prediction algorithms where gform1 only contains the main terms and gform2 includes two more interactions $W_1\times I_1$ and $W_2\times I_2$. SL library includes four methods: ``glm'', ``gam'', ``glmnet'' and ``glm.interaction''. No bounds are set to the probabilities of treatment. Then running by ***summary(ps)***, ***plot(ps)***, we can obtain the summary and plots of all probabilities. In addition, the fitted summaries of the three models can be displayed by ***ps$fit_summaries***. 
+We start with the estimation of propensity scores. We define two GLM regression formulas and one vector of SL prediction algorithms where gform1 only contains the main terms and gform2 includes two more interactions $W_1\times I_1$ and $W_2\times I_2$. SL library includes four methods: "glm", "gam", "glmnet" and "glm.interaction". No bounds are set to the probabilities of treatment. Then running by ***summary(ps)***, ***plot(ps)***, we can obtain the summary and plots of all probabilities. In addition, the fitted summaries of the three models can be displayed by ***ps$fit_summaries***. 
 
 ```{r, message=FALSE}
 ps = ps(A, X, gform1 = "A~ W1+W2+I1+I2", gform2 = "A~ W1*I1+W2*I2", 
          SL.library1 = NULL, 
-         SL.library2 = c("SL.glm", "SL.glmnet", "SL.gam", "SL.glm.interaction"))
+         SL.library2 = c("SL.glm", "SL.glm.interaction"))
 summary(ps)
 summary(ps)$SL
 plot(ps)
 ps$fit_summaries
 ```
 
-Next we use ***bdt*** function to simulate totally 10 bootstrap data sets to estimate the average error of estimators A-IPTW and TMLE and corresponding coverage rates using SL and GLM where the outcome models and the propensity models are included only with main terms (no bounding). We store the results as the objects $bdt\_glm$ and $bdt\_sl$ respectively. Since we only generate 10 data here, a message "Small number of replications may lead to unreliable estimates." shows up. Then we also apply ***summary()***, ***plot()*** to two objects to compare the mean errors and coverage rates of two estimators.
+Next we use ***bdt*** function to simulate totally 10 bootstrap data sets to estimate the average error of estimators A-IPTW and TMLE and corresponding coverage rates using SL and GLM where the propensity model is included only with main terms (no bounding). In order to make the two estimators be comparable, we first generate 11 random number seeds which are used to simulate the new outcomes and 10 bootstrap data sets. We then run the ***bdt*** function repeatedly using GLM and SL for the estimation of propensity scores and store the results as the objects $bdt\_glm$ and $bdt\_sl$ respectively. Since we only generate 10 data here, a message "Small number of replications may lead to unreliable estimates." shows up. Then we also apply ***summary()***, ***plot()*** to two objects to compare the mean errors and coverage rates of two estimators.
 
 
 ```{r, warning=FALSE }
-qform = "Y~A+W1+W2+P"
+m = 10
+seeds = sample(1:10000, m+1, rep = FALSE)
 gform = "A~W1+W2+I1+I2"
-bdt_glm = bdt(Y, A, X, M = 10, outcome_type = "continuous", 
-                Qform = qform, gbound = 0, gGLM = TRUE, gform = gform)
+bdt_glm = bdt(Y, A, W=X, M = m, outcome_type = "continuous", 
+              seed = seeds, gbound = 0, gGLM = TRUE, gform = gform)
 summary(bdt_glm)
 plot(bdt_glm)
 
 lib = c("SL.gam", "SL.glm.interaction")
-bdt_sl = bdt(Y, A, X, M = 10, outcome_type = "continuous", Qform = qform, 
-           gbound = 0, gGLM = FALSE, SL.library = lib)
+bdt_sl = bdt(Y, A, W=X, M = m, outcome_type = "continuous", 
+             seed = seeds, gbound = 0, gGLM = FALSE, SL.library = lib)
 summary(bdt_sl)
 plot(bdt_sl)
 ```
